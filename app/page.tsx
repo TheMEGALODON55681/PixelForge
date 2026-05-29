@@ -1,65 +1,120 @@
+"use client";
+
+import { useState, useTransition } from "react";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 
 export default function Home() {
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [generatedCode, setGeneratedCode] = useState<string>("");
+  const [isPending, startTransition] = useTransition();
+
+  const handleFileSelect = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image must be smaller than 10MB");
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setGeneratedCode("");
+  };
+
+  const handleSubmit = () => {
+    if (!imageFile) {
+      toast.error("Upload a screenshot first");
+      return;
+    }
+
+    startTransition(async () => {
+      // TODO: wire up to /api/generate in Chunk 2
+      toast.info("API call coming in the next step");
+    });
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen bg-background">
+      <Toaster position="top-right" />
+
+      <div className="mx-auto max-w-6xl px-6 py-12">
+        <header className="mb-12 text-center">
+          <h1 className="text-4xl font-bold tracking-tight">PixelForge</h1>
+          <p className="mt-2 text-muted-foreground">
+            Screenshot in. Production-ready code out.
           </p>
+        </header>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {/* Upload panel */}
+          <Card className="p-6">
+            <h2 className="mb-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              Screenshot
+            </h2>
+
+            <label
+              htmlFor="file-upload"
+              className="relative flex h-72 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-border bg-muted/30 transition-colors hover:bg-muted/60"
+            >
+              {imagePreview ? (
+                <Image
+                  src={imagePreview}
+                  alt="Uploaded screenshot preview"
+                  fill
+                  className="object-contain p-2"
+                  unoptimized
+                />
+              ) : (
+                <div className="text-center">
+                  <p className="text-sm font-medium">
+                    Click to upload or drag and drop
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    PNG, JPG, WEBP — max 10MB
+                  </p>
+                </div>
+              )}
+              <input
+                id="file-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileSelect(file);
+                }}
+              />
+            </label>
+
+            <Button
+              onClick={handleSubmit}
+              disabled={!imageFile || isPending}
+              className="mt-4 w-full"
+              size="lg"
+            >
+              {isPending ? "Generating…" : "Generate Code"}
+            </Button>
+          </Card>
+
+          {/* Output panel */}
+          <Card className="p-6">
+            <h2 className="mb-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              Generated Code
+            </h2>
+            <pre className="h-72 overflow-auto rounded-lg bg-muted p-4 text-xs leading-relaxed">
+              <code>
+                {generatedCode || "// Your generated code will appear here…"}
+              </code>
+            </pre>
+          </Card>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
