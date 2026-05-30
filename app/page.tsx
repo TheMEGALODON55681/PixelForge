@@ -34,8 +34,28 @@ export default function Home() {
     }
 
     startTransition(async () => {
-      // TODO: wire up to /api/generate in Chunk 2
-      toast.info("API call coming in the next step");
+      try {
+        const formData = new FormData();
+        formData.append("image", imageFile);
+
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to generate code");
+        }
+
+        const data = await response.json();
+        setGeneratedCode(data.code);
+        toast.success("Code generated");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Something went wrong";
+        toast.error(message);
+        console.error(error);
+      }
     });
   };
 
