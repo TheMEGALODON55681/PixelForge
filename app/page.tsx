@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Copy, Check } from "lucide-react"; 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Home() {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -137,38 +138,76 @@ const handleCopy = async () => {
           </Card>
 
           {/* Output panel */}
-          {/* Output panel */}
-          
           <Card className="p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                Generated Code
-              </h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopy}
-                disabled={!generatedCode}
-              >
-                {copied ? (
-                  <>
-                    <Check className="mr-2 h-3.5 w-3.5" /> Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="mr-2 h-3.5 w-3.5" /> Copy
-                  </>
-                )}
-              </Button>
-            </div>
-            <pre className="h-72 overflow-auto rounded-lg bg-muted p-4 text-xs leading-relaxed">
-              <code>
-                {generatedCode || "// Your generated code will appear here…"}
-              </code>
-            </pre>
+            <Tabs defaultValue="preview" className="w-full">
+              <div className="mb-4 flex items-center justify-between">
+                <TabsList>
+                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                  <TabsTrigger value="code">Code</TabsTrigger>
+                </TabsList>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopy}
+                  disabled={!generatedCode}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="mr-2 h-3.5 w-3.5" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-2 h-3.5 w-3.5" /> Copy
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <TabsContent value="preview" className="mt-0">
+                <div className="h-72 overflow-auto rounded-lg border bg-white">
+                  {generatedCode ? (
+                    <iframe
+                      srcDoc={createPreviewDoc(generatedCode)}
+                      className="h-full w-full border-0"
+                      sandbox="allow-scripts"
+                      title="Live preview of generated HTML"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                      Preview will appear here once code is generated
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="code" className="mt-0">
+                <pre className="h-72 overflow-auto rounded-lg bg-muted p-4 text-xs leading-relaxed">
+                  <code>
+                    {generatedCode || "// Your generated code will appear here…"}
+                  </code>
+                </pre>
+              </TabsContent>
+            </Tabs>
           </Card>
         </div>
       </div>
     </main>
   );
+}
+
+function createPreviewDoc(html: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; padding: 1rem; background: white; }
+  </style>
+</head>
+<body>
+${html}
+</body>
+</html>`;
 }
