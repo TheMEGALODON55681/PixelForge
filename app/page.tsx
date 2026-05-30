@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
+import { Copy, Check } from "lucide-react"; 
 
 export default function Home() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [generatedCode, setGeneratedCode] = useState<string>("");
+  const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const handleFileSelect = (file: File) => {
@@ -57,6 +59,18 @@ export default function Home() {
         console.error(error);
       }
     });
+  };
+
+const handleCopy = async () => {
+    if (!generatedCode) return;
+    try {
+      await navigator.clipboard.writeText(generatedCode);
+      setCopied(true);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy");
+    }
   };
 
   return (
@@ -123,10 +137,30 @@ export default function Home() {
           </Card>
 
           {/* Output panel */}
+          {/* Output panel */}
+          
           <Card className="p-6">
-            <h2 className="mb-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">
-              Generated Code
-            </h2>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                Generated Code
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopy}
+                disabled={!generatedCode}
+              >
+                {copied ? (
+                  <>
+                    <Check className="mr-2 h-3.5 w-3.5" /> Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-2 h-3.5 w-3.5" /> Copy
+                  </>
+                )}
+              </Button>
+            </div>
             <pre className="h-72 overflow-auto rounded-lg bg-muted p-4 text-xs leading-relaxed">
               <code>
                 {generatedCode || "// Your generated code will appear here…"}
