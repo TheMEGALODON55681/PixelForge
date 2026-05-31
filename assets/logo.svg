@@ -1,0 +1,23 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PixelForge">
+  <rect x="2" y="2" width="92" height="92" rx="20" fill="#2A2724"/>
+  <rect x="2.5" y="2.5" width="91" height="91" rx="19.5" stroke="#E8843C" stroke-opacity="0.35"/>
+
+  <!-- raw pixels (left): scattered grid -->
+  <g fill="#8B8580">
+    <rect x="22" y="26" width="8" height="8" rx="1.5"/>
+    <rect x="22" y="44" width="8" height="8" rx="1.5"/>
+    <rect x="34" y="35" width="8" height="8" rx="1.5"/>
+    <rect x="22" y="62" width="8" height="8" rx="1.5"/>
+  </g>
+
+  <!-- the forge spark -->
+  <path d="M44 48 L54 38 M44 48 L54 58" stroke="#E8843C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- ordered code lines (right): structured output -->
+  <g stroke="#F4EDE6" stroke-width="3.5" stroke-linecap="round">
+    <line x1="60" y1="34" x2="76" y2="34"/>
+    <line x1="60" y1="44" x2="72" y2="44"/>
+    <line x1="60" y1="54" x2="76" y2="54"/>
+    <line x1="60" y1="64" x2="68" y2="64"/>
+  </g>
+</svg>

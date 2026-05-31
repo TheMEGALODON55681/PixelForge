@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PixelForge — Screenshot to Code",
-  description: "Upload a screenshot. Get production-ready HTML and Tailwind code instantly. Powered by GPT-4o.",
+  title: "PixelForge — Forge code from a screenshot",
+  description:
+    "An instrument for turning UI screenshots into clean, semantic HTML and Tailwind. Drop, paste, or drag an image and watch the markup forge in real time.",
 };
 
 export default function RootLayout({
@@ -24,10 +25,11 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en" className="dark"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="en"
+      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }

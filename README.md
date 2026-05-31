@@ -33,10 +33,6 @@ Built with Next.js 16, the Vercel AI SDK, and GPT-4o vision via GitHub Models.
 
 PixelForge breaks down the screenshot-to-code task into a streaming pipeline:
 
-<p align="center">
-  <img src="assets/architecture.png" style="width: 70%; height: auto;" />
-</p>
-
 1. **Upload Stage** — Image is validated client-side (type, size up to 10MB), then sent as multipart form data to the `/api/generate` route handler.
 
 2. **Inference Stage** — The route handler base64-encodes the image and constructs a multimodal chat completion request to GPT-4o via GitHub Models. A carefully tuned system prompt guides the model to output semantic HTML with Tailwind utility classes — no markdown fences, no preamble, just the markup.
