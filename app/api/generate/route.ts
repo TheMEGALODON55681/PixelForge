@@ -19,7 +19,7 @@ const MAX_BYTES = 10 * 1024 * 1024;
   but flips the defaults for icons, images, and color so the preview actually
   resembles the source screenshot.
 */
-const SYSTEM_PROMPT = `You are a senior frontend engineer specializing in pixel-faithful screenshot-to-code reconstruction.
+const BASE_SYSTEM_PROMPT = `You are a senior frontend engineer specializing in pixel-faithful screenshot-to-code reconstruction.
 
 Your task: study the screenshot and produce clean, semantic HTML styled with Tailwind CSS that reproduces the design with high visual fidelity — colors, spacing, hierarchy, density, and detail.
 
@@ -78,6 +78,18 @@ Do NOT use placehold.co. Instead, render placeholders as Tailwind-styled <div>s 
 
 Goal: when rendered, the output is visually recognizable as the screenshot — same colors, same icons, same layout density. A developer can paste this directly into a project.`;
 
+const JSX_RIDER = `
+
+==================== JSX OUTPUT RULES ====================
+You are outputting JSX for use in a React component, not raw HTML.
+Apply ALL of the following transformations:
+- Convert every 'class' attribute to 'className'.
+- Self-close void elements: <input />, <img />, <br />, <hr />, <meta />, <link />, <source />, <area />, <base />, <col />, <embed />, <param />, <track />, <wbr />.
+- Escape literal curly braces that appear in text content: write a literal { as {'{'} and a literal } as {'}'} so React does not interpret them as expressions.
+- Use camelCase for event handlers and SVG attributes: onClick, onChange, onSubmit, htmlFor, strokeWidth, strokeLinecap, strokeLinejoin, fillRule, clipRule, tabIndex, readOnly, autoComplete, autoFocus, maxLength, etc.
+- Do NOT emit <html>, <head>, or <body> tags. Output ONLY the component markup.
+- Keep all other rules intact: inline SVG icons, gradient placeholders, color fidelity, semantic HTML.`;
+
 const github = createOpenAI({
   baseURL: "https://models.github.ai/inference",
   apiKey: process.env.GITHUB_MODELS_TOKEN,
@@ -92,11 +104,23 @@ export async function POST(req: NextRequest) {
   }
 
   let image: File | null = null;
+  let framework = "html";
+
   try {
     const formData = await req.formData();
     image = formData.get("image") as File | null;
+    const fw = formData.get("framework") as string | null;
+    if (fw) framework = fw;
   } catch {
     return new Response("Malformed multipart form data", { status: 400 });
+  }
+
+  // Validate framework
+  if (framework !== "html" && framework !== "jsx") {
+    return new Response(
+      'Invalid framework. Must be "html" or "jsx".',
+      { status: 400 },
+    );
   }
 
   if (!image) return new Response("No image provided", { status: 400 });
@@ -112,9 +136,14 @@ export async function POST(req: NextRequest) {
     const base64 = Buffer.from(bytes).toString("base64");
     const dataUrl = `data:${image.type};base64,${base64}`;
 
+    const systemPrompt =
+      framework === "jsx"
+        ? BASE_SYSTEM_PROMPT + JSX_RIDER
+        : BASE_SYSTEM_PROMPT;
+
     const result = streamText({
       model: github.chat("openai/gpt-4o"),
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: [
         {
           role: "user",

@@ -13,6 +13,13 @@ import {
   Maximize2,
   ClipboardPaste,
   Hammer,
+  Download,
+  RotateCw,
+  History,
+  Monitor,
+  Tablet,
+  Smartphone,
+  Keyboard,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -23,6 +30,23 @@ import {
 } from "@/components/ui/dialog";
 
 type Status = "idle" | "forging" | "ready";
+type Framework = "html" | "jsx";
+type DeviceWidth = "desktop" | "tablet" | "mobile";
+
+interface HistoryEntry {
+  id: string;
+  imageFile: File;
+  imagePreview: string;
+  imageMeta: { w: number; h: number } | null;
+  generatedCode: string;
+  timestamp: number;
+  bytes: number;
+}
+
+interface ShortcutItem {
+  keys: string[];
+  action: string;
+}
 
 const stripCodeFences = (code: string): string =>
   code
@@ -36,7 +60,25 @@ const formatBytes = (n: number): string => {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const formatTimestamp = (ts: number): string => {
+  const seconds = Math.floor((Date.now() - ts) / 1000);
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+  return `${Math.floor(seconds / 3600)} hr ago`;
+};
+
 const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_HISTORY = 10;
+
+const SHORTCUTS: ShortcutItem[] = [
+  { keys: ["Ctrl+V"], action: "Paste image from clipboard" },
+  { keys: ["Ctrl+Enter"], action: "Forge / re-forge code" },
+  { keys: ["Ctrl+C"], action: "Copy generated code" },
+  { keys: ["Ctrl+S"], action: "Download generated code" },
+  { keys: ["Ctrl+H"], action: "Toggle history drawer" },
+  { keys: ["Ctrl+/"], action: "Show keyboard shortcuts" },
+  { keys: ["Esc"], action: "Close any open dialog or panel" },
+];
 
 export default function Home() {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -48,16 +90,53 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [framework, setFramework] = useState<Framework>("html");
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [deviceWidth, setDeviceWidth] = useState<DeviceWidth>("desktop");
+  const [activeTab, setActiveTab] = useState("preview");
+  const [isMac, setIsMac] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const historyObjectUrlsRef = useRef<Map<string, string>>(new Map());
+
+  // Detect Mac vs non-Mac for keyboard-shortcut display. This must run on the
+  // client only (navigator is undefined during SSR), so the initial render uses
+  // the SSR-safe default (false) and we correct it after mount. Setting state in
+  // this effect is intentional and avoids a hydration mismatch — the alternative
+  // (reading navigator in a lazy initializer) would desync server vs client HTML.
+  useEffect(() => {
+    // navigator.userAgentData is not yet in the TS DOM lib; narrow it locally.
+    const uaData = (
+      navigator as Navigator & {
+        userAgentData?: { platform?: string };
+      }
+    ).userAgentData;
+    const platform = navigator.platform || uaData?.platform || "";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMac(platform.toLowerCase().includes("mac"));
+  }, []);
+
+  // Format shortcut key for display (⌘ on Mac, Ctrl on non-Mac)
+  const modKey = isMac ? "⌘" : "Ctrl";
 
   // Revoke any object URL we created so blob previews don't leak.
   const releaseObjectUrl = useCallback(() => {
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
+    }
+  }, []);
+
+  // Revoke a history entry's object URL
+  const revokeHistoryUrl = useCallback((id: string) => {
+    const url = historyObjectUrlsRef.current.get(id);
+    if (url) {
+      URL.revokeObjectURL(url);
+      historyObjectUrlsRef.current.delete(id);
     }
   }, []);
 
@@ -90,61 +169,125 @@ export default function Home() {
     [releaseObjectUrl],
   );
 
-  const handleSubmit = useCallback(async () => {
-    if (!imageFile) {
-      toast.error("Add a screenshot to forge from");
-      return;
-    }
+  const addToHistory = useCallback(
+    (
+      file: File,
+      preview: string,
+      meta: { w: number; h: number } | null,
+      code: string,
+    ) => {
+      const entry: HistoryEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        imageFile: file,
+        imagePreview: preview,
+        imageMeta: meta,
+        generatedCode: code,
+        timestamp: Date.now(),
+        bytes: new TextEncoder().encode(code).length,
+      };
 
-    // Cancel any in-flight generation before starting a new one.
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
+      // Store the object URL reference for cleanup
+      historyObjectUrlsRef.current.set(entry.id, preview);
 
-    setIsGenerating(true);
-    setGeneratedCode("");
-
-    try {
-      const formData = new FormData();
-      formData.append("image", imageFile);
-
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        body: formData,
-        signal: controller.signal,
+      setHistory((prev) => {
+        const next = [entry, ...prev];
+        // Evict oldest if exceeding MAX_HISTORY
+        if (next.length > MAX_HISTORY) {
+          const evicted = next.pop()!;
+          // Revoke the evicted entry's object URL after a tick to ensure it's not in use
+          setTimeout(() => revokeHistoryUrl(evicted.id), 0);
+        }
+        return next;
       });
+    },
+    [revokeHistoryUrl],
+  );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Failed to generate code");
+  const restoreHistoryEntry = useCallback(
+    (entry: HistoryEntry) => {
+      releaseObjectUrl();
+      setImageFile(entry.imageFile);
+      setImagePreview(entry.imagePreview);
+      setImageMeta(entry.imageMeta);
+      setGeneratedCode(entry.generatedCode);
+      objectUrlRef.current = entry.imagePreview;
+      setHistoryOpen(false);
+      toast.success("Restored generation from history");
+    },
+    [releaseObjectUrl],
+  );
+
+  const handleSubmit = useCallback(
+    async (frameworkOverride?: Framework) => {
+      const fw = frameworkOverride || framework;
+      if (!imageFile) {
+        toast.error("Add a screenshot to forge from");
+        return;
       }
-      if (!response.body) throw new Error("No response stream");
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = "";
+      // Cancel any in-flight generation before starting a new one.
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-        setGeneratedCode(stripCodeFences(accumulated));
+      setIsGenerating(true);
+      setGeneratedCode("");
+
+      try {
+        const formData = new FormData();
+        formData.append("image", imageFile);
+        formData.append("framework", fw);
+
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || "Failed to generate code");
+        }
+        if (!response.body) throw new Error("No response stream");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = "";
+
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          accumulated += decoder.decode(value, { stream: true });
+          setGeneratedCode(stripCodeFences(accumulated));
+        }
+
+        const finalCode = stripCodeFences(accumulated);
+        setGeneratedCode(finalCode);
+
+        // Add to history after successful generation
+        addToHistory(imageFile, imagePreview!, imageMeta, finalCode);
+
+        toast.success("Forged", { description: "Code is ready to copy" });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
+        const message =
+          error instanceof Error ? error.message : "Something went wrong";
+        toast.error(message);
+        console.error(error);
+      } finally {
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+          setIsGenerating(false);
+        }
       }
+    },
+    [imageFile, framework, imagePreview, imageMeta, addToHistory],
+  );
 
-      toast.success("Forged", { description: "Code is ready to copy" });
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      const message =
-        error instanceof Error ? error.message : "Something went wrong";
-      toast.error(message);
-      console.error(error);
-    } finally {
-      if (abortRef.current === controller) {
-        abortRef.current = null;
-        setIsGenerating(false);
-      }
-    }
-  }, [imageFile]);
+  const handleForgeAgain = useCallback(() => {
+    handleSubmit();
+  }, [handleSubmit]);
 
   const handleCopy = useCallback(async () => {
     if (!generatedCode) return;
@@ -157,6 +300,40 @@ export default function Home() {
       toast.error("Couldn't access the clipboard");
     }
   }, [generatedCode]);
+
+  const handleDownload = useCallback(() => {
+    if (!generatedCode) return;
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const ext = framework === "jsx" ? "jsx" : "html";
+    const filename = `pixelforge-${timestamp}.${ext}`;
+
+    const blob = new Blob([generatedCode], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Downloaded", { description: filename });
+  }, [generatedCode, framework]);
+
+  // Load example screenshot
+  const loadExample = useCallback(async () => {
+    try {
+      const response = await fetch("/example.png");
+      if (!response.ok) throw new Error("Failed to load example");
+      const blob = await response.blob();
+      const file = new File([blob], "example.png", { type: blob.type });
+      acceptFile(file);
+      toast.success("Example loaded");
+    } catch {
+      toast.error("Couldn't load the example screenshot");
+    }
+  }, [acceptFile]);
 
   // Paste-a-screenshot (⌘/Ctrl+V) — the way screenshots are actually captured.
   useEffect(() => {
@@ -175,11 +352,78 @@ export default function Home() {
     return () => window.removeEventListener("paste", onPaste);
   }, [acceptFile]);
 
-  // Cleanup on unmount: cancel stream + revoke blob URL.
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+
+      // Don't fire shortcuts when typing in inputs
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      // Ctrl+/ or Cmd+/ — show shortcuts panel
+      if (ctrl && e.key === "/") {
+        e.preventDefault();
+        setShortcutsOpen((open) => !open);
+        return;
+      }
+
+      // Esc — close any open dialog/panel
+      if (e.key === "Escape") {
+        setShortcutsOpen(false);
+        setHistoryOpen(false);
+        return;
+      }
+
+      // Ctrl+H or Cmd+H — toggle history drawer
+      if (ctrl && e.key.toLowerCase() === "h") {
+        e.preventDefault();
+        setHistoryOpen((open) => !open);
+        return;
+      }
+
+      // Ctrl+Enter or Cmd+Enter — forge / re-forge
+      if (ctrl && e.key === "Enter") {
+        e.preventDefault();
+        if (imageFile && !isGenerating) {
+          handleSubmit();
+        }
+        return;
+      }
+
+      // Ctrl+C or Cmd+C — copy generated code
+      if (ctrl && e.key.toLowerCase() === "c" && generatedCode) {
+        // Only intercept if no text is selected (avoid breaking normal copy)
+        const selection = window.getSelection()?.toString() || "";
+        if (!selection) {
+          e.preventDefault();
+          handleCopy();
+        }
+        return;
+      }
+
+      // Ctrl+S or Cmd+S — download generated code
+      if (ctrl && e.key.toLowerCase() === "s" && generatedCode) {
+        e.preventDefault();
+        handleDownload();
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleSubmit, handleCopy, handleDownload, imageFile, isGenerating, generatedCode]);
+
+  // Cleanup on unmount: cancel stream + revoke blob URLs + revoke history URLs.
   useEffect(
     () => () => {
       abortRef.current?.abort();
       releaseObjectUrl();
+      // Revoke all history object URLs
+      historyObjectUrlsRef.current.forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+      historyObjectUrlsRef.current.clear();
     },
     [releaseObjectUrl],
   );
@@ -195,6 +439,17 @@ export default function Home() {
     const lines = generatedCode ? generatedCode.split("\n").length : 0;
     return { bytes, lines };
   }, [generatedCode]);
+
+  const deviceWidthPx = useMemo(() => {
+    switch (deviceWidth) {
+      case "mobile":
+        return 375;
+      case "tablet":
+        return 768;
+      default:
+        return null; // full width
+    }
+  }, [deviceWidth]);
 
   return (
     <main className="relative flex min-h-screen flex-col">
@@ -216,6 +471,16 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setHistoryOpen(true)}
+              disabled={history.length === 0}
+              className="hidden font-mono text-[0.68rem] uppercase tracking-[0.18em] sm:inline-flex"
+            >
+              <History className="mr-1.5 size-3.5" />
+              History ({history.length})
+            </Button>
             <StatusChip status={status} />
             <span className="pf-kicker hidden md:inline">
               gpt-4o · github models
@@ -291,6 +556,19 @@ export default function Home() {
                     <p className="mt-1 font-mono text-[0.7rem] text-muted-foreground">
                       PNG · JPG · WEBP — up to 10MB
                     </p>
+                    {!imageFile && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          loadExample();
+                        }}
+                        className="pf-kicker mt-2 text-ember underline-offset-2 hover:underline"
+                      >
+                        Try with an example
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -315,7 +593,7 @@ export default function Home() {
             )}
 
             <Button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit()}
               disabled={!imageFile || isGenerating}
               size="lg"
               className="mt-4 w-full"
@@ -337,30 +615,90 @@ export default function Home() {
               <ClipboardPaste className="size-3" aria-hidden />
               Tip: copy a screenshot, then press{" "}
               <kbd className="rounded border border-rule bg-card px-1 font-mono text-[0.65rem]">
-                ⌘V
+                {modKey}V
               </kbd>{" "}
               anywhere.
             </p>
           </section>
 
           {/* OUTPUT workspace */}
-          <section className="pf-frame flex min-h-[28rem] flex-col p-5">
+          <section className="pf-frame flex min-h-[20rem] flex-col p-5 sm:min-h-[28rem]">
             <CornerTicks />
-            <Tabs defaultValue="preview" className="flex w-full flex-1 flex-col">
-              <div className="mb-4 flex items-center justify-between gap-2">
-                <TabsList>
-                  <TabsTrigger value="preview">Preview</TabsTrigger>
-                  <TabsTrigger value="code">Code</TabsTrigger>
-                </TabsList>
+            <Tabs
+              defaultValue="preview"
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="flex w-full flex-1 flex-col"
+            >
+              {/* Output controls row */}
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <TabsList>
+                    <TabsTrigger value="preview">Preview</TabsTrigger>
+                    <TabsTrigger value="code">Code</TabsTrigger>
+                  </TabsList>
 
-                <div className="flex items-center gap-3">
+                  {/* Framework toggle */}
+                  <TabsList>
+                    <TabsTrigger
+                      value="html"
+                      data-state={framework === "html" ? "active" : "inactive"}
+                      onClick={() => setFramework("html")}
+                    >
+                      HTML
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="jsx"
+                      data-state={framework === "jsx" ? "active" : "inactive"}
+                      onClick={() => setFramework("jsx")}
+                    >
+                      JSX
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  {/* Telemetry — separate row on mobile, inline on sm+ */}
                   {(generatedCode || isGenerating) && (
-                    <span className="hidden font-mono text-[0.7rem] text-muted-foreground sm:inline">
+                    <span className="whitespace-nowrap font-mono text-[0.7rem] text-muted-foreground sm:order-1">
                       {formatBytes(telemetry.bytes)} · {telemetry.lines} ln
                     </span>
                   )}
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 sm:order-2">
+                    {/* Device width toggle — only visible in Preview tab */}
+                    {activeTab === "preview" && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant={deviceWidth === "desktop" ? "outline" : "ghost"}
+                          size="icon-sm"
+                          onClick={() => setDeviceWidth("desktop")}
+                          aria-label="Desktop width"
+                          className="size-8"
+                        >
+                          <Monitor className="size-4" />
+                        </Button>
+                        <Button
+                          variant={deviceWidth === "tablet" ? "outline" : "ghost"}
+                          size="icon-sm"
+                          onClick={() => setDeviceWidth("tablet")}
+                          aria-label="Tablet width"
+                          className="size-8"
+                        >
+                          <Tablet className="size-4" />
+                        </Button>
+                        <Button
+                          variant={deviceWidth === "mobile" ? "outline" : "ghost"}
+                          size="icon-sm"
+                          onClick={() => setDeviceWidth("mobile")}
+                          aria-label="Mobile width"
+                          className="size-8"
+                        >
+                          <Smartphone className="size-4" />
+                        </Button>
+                      </div>
+                    )}
+
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button
@@ -368,22 +706,25 @@ export default function Home() {
                           size="icon-sm"
                           disabled={!generatedCode}
                           aria-label="Expand preview to fullscreen"
+                          className="size-8"
                         >
-                          <Maximize2 />
+                          <Maximize2 className="size-4" />
                         </Button>
                       </DialogTrigger>
-                      <DialogContent
-                        style={{ maxWidth: "95vw", width: "95vw" }}
-                        className="h-[92vh] border-rule bg-background p-2 sm:rounded-lg sm:max-w-[95vw]"
-                      >
+                      <DialogContent className="h-[90vh] w-full border-rule bg-background p-2 sm:h-[92vh] sm:max-w-[95vw] sm:rounded-lg">
                         <DialogTitle className="sr-only">
                           Expanded preview
                         </DialogTitle>
                         <div className="h-full w-full overflow-hidden rounded-md bg-white">
                           {generatedCode ? (
                             <iframe
-                              srcDoc={createPreviewDoc(generatedCode)}
-                              className="h-full w-full border-0"
+                              srcDoc={createPreviewDoc(generatedCode, deviceWidthPx)}
+                              className="mx-auto h-full border-0"
+                              style={
+                                deviceWidthPx
+                                  ? { width: `${deviceWidthPx}px` }
+                                  : { width: "100%" }
+                              }
                               sandbox="allow-scripts"
                               title="Live preview expanded"
                             />
@@ -391,6 +732,27 @@ export default function Home() {
                         </div>
                       </DialogContent>
                     </Dialog>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleForgeAgain}
+                      disabled={!imageFile || isGenerating}
+                    >
+                      <RotateCw className="size-4" />
+                      <span className="hidden sm:inline">Forge again</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={handleDownload}
+                      disabled={!generatedCode}
+                      aria-label="Download code"
+                      className="size-8"
+                    >
+                      <Download className="size-4" />
+                    </Button>
 
                     <Button
                       variant="outline"
@@ -416,6 +778,7 @@ export default function Home() {
                 <PreviewCanvas
                   code={generatedCode}
                   isGenerating={isGenerating}
+                  deviceWidthPx={deviceWidthPx}
                 />
               </TabsContent>
 
@@ -428,12 +791,117 @@ export default function Home() {
       </div>
 
       <footer className="border-t border-rule">
-        <div className="mx-auto max-w-6xl px-5 py-5 sm:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
           <p className="pf-kicker">
             Next.js · Tailwind · Vercel AI SDK · GitHub Models
           </p>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setShortcutsOpen(true)}
+            aria-label="Keyboard shortcuts"
+            className="size-8"
+          >
+            <Keyboard className="size-4" />
+          </Button>
         </div>
       </footer>
+
+      {/* History Drawer */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent
+          className="fixed right-0 top-0 h-full w-full max-w-sm translate-x-0 translate-y-0 rounded-none border-l border-rule bg-background p-0 sm:max-w-sm"
+        >
+          <DialogTitle className="sr-only">History</DialogTitle>
+          <div className="flex h-full flex-col">
+            <div className="flex items-center border-b border-rule px-5 py-4 pr-14">
+              <h2 className="pf-kicker">History</h2>
+            </div>
+
+            <div className="flex-1 overflow-auto p-5">
+              {history.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
+                  <History className="size-8 opacity-30" />
+                  <p className="pf-kicker text-center">No generations yet</p>
+                  <p className="text-center text-xs opacity-60">
+                    Generated code will appear here
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {history.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex gap-3 rounded-md border border-rule bg-card p-3"
+                    >
+                      <div className="relative h-16 w-20 flex-shrink-0 overflow-hidden rounded bg-background">
+                        <Image
+                          src={entry.imagePreview}
+                          alt="Screenshot thumbnail"
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
+                      <div className="flex flex-1 flex-col justify-between">
+                        <div>
+                          <p className="font-mono text-[0.7rem] text-muted-foreground">
+                            {formatTimestamp(entry.timestamp)}
+                          </p>
+                          <p className="font-mono text-[0.68rem] text-muted-foreground">
+                            {formatBytes(entry.bytes)}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => restoreHistoryEntry(entry)}
+                          className="h-7 self-start text-xs"
+                        >
+                          Restore
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Keyboard Shortcuts Panel */}
+      <Dialog open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
+        <DialogContent className="pf-frame max-w-sm border-rule bg-background p-0">
+          <DialogTitle className="sr-only">Keyboard Shortcuts</DialogTitle>
+          <div className="flex items-center border-b border-rule px-5 py-4 pr-14">
+            <h2 className="pf-kicker">Keyboard Shortcuts</h2>
+          </div>
+          <div className="p-5">
+            <table className="w-full">
+              <tbody className="divide-y divide-rule">
+                {SHORTCUTS.map((shortcut) => (
+                  <tr key={shortcut.action} className="flex items-center justify-between py-2.5">
+                    <td className="text-sm text-muted-foreground">
+                      {shortcut.action}
+                    </td>
+                    <td className="flex gap-1">
+                      {shortcut.keys.map((key) => (
+                        <kbd
+                          key={key}
+                          className="rounded border border-rule bg-card px-1.5 py-0.5 font-mono text-[0.65rem]"
+                        >
+                          {key.replace("Ctrl", modKey).replace("+/", "+/")}
+                        </kbd>
+                      ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
@@ -474,22 +942,39 @@ function CornerTicks() {
 function PreviewCanvas({
   code,
   isGenerating,
+  deviceWidthPx,
 }: {
   code: string;
   isGenerating: boolean;
+  deviceWidthPx: number | null;
 }) {
   return (
-    <div className="relative h-full min-h-[20rem] overflow-hidden rounded-md bg-white ring-1 ring-rule">
+    <div className="relative h-full min-h-[20rem] overflow-hidden rounded-md bg-white ring-1 ring-rule sm:min-h-[28rem]">
+      {/* Device width label */}
+      {deviceWidthPx && (
+        <div className="absolute left-0 right-0 top-0 z-10 flex justify-center py-1">
+          <span className="pf-kicker text-ember">
+            {deviceWidthPx} × auto
+          </span>
+        </div>
+      )}
       {isGenerating && (
         <div className="pf-scan absolute inset-x-0 top-0 z-10 h-px" />
       )}
       {code ? (
-        <iframe
-          srcDoc={createPreviewDoc(code)}
-          className="h-full w-full border-0"
-          sandbox="allow-scripts"
-          title="Live preview of generated HTML"
-        />
+        <div className="flex h-full justify-center">
+          <iframe
+            srcDoc={createPreviewDoc(code, deviceWidthPx)}
+            className="h-full border-0"
+            style={
+              deviceWidthPx
+                ? { width: `${deviceWidthPx}px`, marginTop: "1.5rem" }
+                : { width: "100%" }
+            }
+            sandbox="allow-scripts"
+            title="Live preview of generated HTML"
+          />
+        </div>
       ) : isGenerating ? (
         <div className="flex h-full items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-zinc-400">
@@ -518,7 +1003,7 @@ function PreviewCanvas({
 function CodeView({ code }: { code: string }) {
   const lines = code ? code.split("\n") : [];
   return (
-    <div className="h-full min-h-[20rem] overflow-auto rounded-md bg-[oklch(0.13_0.006_67)] ring-1 ring-rule">
+    <div className="h-full min-h-[20rem] overflow-auto rounded-md bg-[oklch(0.13_0.006_67)] ring-1 ring-rule sm:min-h-[28rem]">
       {code ? (
         <div className="flex min-w-full font-mono text-xs leading-relaxed">
           <div
@@ -536,7 +1021,7 @@ function CodeView({ code }: { code: string }) {
       ) : (
         <div className="flex h-full items-center justify-center">
           <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground/60">
-            // markup will stream here
+            {"// markup will stream here"}
           </p>
         </div>
       )}
@@ -544,12 +1029,15 @@ function CodeView({ code }: { code: string }) {
   );
 }
 
-function createPreviewDoc(html: string): string {
+function createPreviewDoc(html: string, deviceWidthPx?: number | null): string {
+  const viewportMeta = deviceWidthPx
+    ? `<meta name="viewport" content="width=${deviceWidthPx}, initial-scale=1.0" />`
+    : `<meta name="viewport" content="width=device-width, initial-scale=1.0" />`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  ${viewportMeta}
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { margin: 0; padding: 1rem; background: #fff; }
