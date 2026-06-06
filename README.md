@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://pixel-forge-three-nu.vercel.app/"><b>Live demo</b></a> ·
   <a href="#getting-started"><b>Get started</b></a> ·
   <a href="https://github.com/TheMEGALODON55681/PixelForge/issues"><b>Report a bug</b></a> ·
   <a href="#roadmap"><b>Roadmap</b></a>
@@ -34,8 +35,11 @@ PixelForge is a screenshot-to-code tool with a deliberate point of view: it shou
 
 Built with Next.js 16, the Vercel AI SDK, and GPT-4o vision via GitHub Models.
 
+**Try it live:** [pixel-forge-three-nu.vercel.app](https://pixel-forge-three-nu.vercel.app/)
+
 ## What's new
 
+- **[2026/06]** Live deployment on Vercel — [pixel-forge-three-nu.vercel.app](https://pixel-forge-three-nu.vercel.app/)
 - **[2026/06]** Major UI overhaul: ember-on-graphite design language, hairline panels with corner registration ticks, live byte/line telemetry, real responsive layout
 - **[2026/06]** Generation history (last 10 in session), framework toggle (HTML or JSX), one-click download, device-width preview (desktop / tablet / mobile), keyboard shortcuts (paste, forge, copy, download, history)
 - **[2026/06]** Paste-a-screenshot directly with ⌘V / Ctrl+V, real drag-and-drop, "Try with an example" for first-time visitors
@@ -59,6 +63,36 @@ The product does one thing, and tries to do it better than anything else.
 <p align="center">
   <img src="assets/history.png" alt="The session history drawer, showing a previous generation with its source thumbnail, timestamp, byte count, and a Restore button" style="width: 95%; height: auto; border-radius: 8px;" />
 </p>
+
+## 📊 Architecture & Knowledge Graph
+
+This project includes a generated **knowledge graph** mapping all components, functions, utilities, and design decisions across the codebase.
+
+**Graph Stats:**
+- **225 nodes** (components, functions, configs, concepts, design notes)
+- **285 edges** (dependencies, references, semantic relationships)
+- **19 communities** (natural clusters of related functionality)
+- **Core abstractions:** `cn()` utility (27 connections), PixelForge Roadmap, streaming pipeline, UI components
+
+### Explore the Architecture
+
+- **Interactive 3D Graph:** [`docs/architecture/graph.html`](docs/architecture/graph.html) — open locally to zoom, pan, and click nodes
+- **Full Report:** [`docs/architecture/GRAPH_REPORT.md`](docs/architecture/GRAPH_REPORT.md) — communities, cohesion metrics, refactoring suggestions, isolated nodes
+- **Raw Graph Data:** [`docs/architecture/graph.json`](docs/architecture/graph.json) — structured data for programmatic use
+
+### Why This Matters
+
+The knowledge graph lets you (or anyone onboarding):
+- **Understand architecture instantly** — no need to read all 33 files
+- **Spot design flaws** — identifies isolated components, weak cohesion areas, missing edges
+- **Find integration points** — shows which nodes bridge communities (high-impact when changed)
+- **Plan refactors** — community cohesion scores suggest where to split modules
+
+### Generated With
+
+[graphify](https://github.com/slang-ai/graphify) + Claude subagents for semantic extraction
+
+---
 
 ## How it works
 
@@ -84,8 +118,13 @@ PixelForge breaks down screenshot-to-code into a streaming pipeline:
 | Model | GPT-4o via GitHub Models |
 | Icons | Lucide React |
 | Notifications | Sonner |
+| Hosting | Vercel |
 
 ## Getting started
+
+> Just want to try it? Open the **[live demo](https://pixel-forge-three-nu.vercel.app/)** — no setup required.
+>
+> To run it yourself or contribute, follow the steps below.
 
 ### Prerequisites
 
@@ -151,9 +190,9 @@ The preview must render on white. Dark chrome around a white artboard reads like
 ## Roadmap
 
 Near term:
+- [x] Production deployment on Vercel — [live](https://pixel-forge-three-nu.vercel.app/)
 - [ ] Persist session history and preferences across reloads
 - [ ] Syntax highlighting in the Code view (Shiki)
-- [ ] Production deployment + live demo link
 
 Mid term:
 - [ ] **Refinement loop** — "make the header sticky," "use a 3-column grid" — re-runs the model with the previous code + a natural-language instruction
