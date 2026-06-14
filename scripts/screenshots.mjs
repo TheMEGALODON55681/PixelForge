@@ -55,15 +55,6 @@ async function loadExample(page) {
   });
 }
 
-/** Click Forge and wait until the status chip reads "Ready". */
-async function forge(page) {
-  await page.getByRole('button', { name: /forge code/i }).click();
-  // Wait for the stream to complete (status chip changes from Forging → Ready)
-  await page.waitForFunction(
-    () => document.querySelector('[role="status"]')?.textContent?.toLowerCase().includes('ready'),
-    { timeout: 60_000 },
-  );
-}
 
 async function main() {
   // Start the dev server in the background
