@@ -1,0 +1,126 @@
+<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PixelForge architecture diagram">
+  <defs>
+    <marker id="arr-ember" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#E8843C" opacity="0.7" />
+    </marker>
+    <marker id="arr-muted" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#8B8580" opacity="0.7" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="#1c1917" />
+
+  <!-- Subtle dot grid (matches globals.css) -->
+  <defs>
+    <pattern id="grid" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="0" cy="0" r="0.8" fill="#ffffff" opacity="0.05" />
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#grid)" />
+
+  <!-- Corner registration ticks (matches pf-tick CSS) -->
+  <line x1="0" y1="10" x2="10" y2="10" stroke="#E8843C" stroke-width="1.5" opacity="0.45" />
+  <line x1="10" y1="0" x2="10" y2="10" stroke="#E8843C" stroke-width="1.5" opacity="0.45" />
+  <line x1="790" y1="10" x2="800" y2="10" stroke="#E8843C" stroke-width="1.5" opacity="0.45" />
+  <line x1="790" y1="0" x2="790" y2="10" stroke="#E8843C" stroke-width="1.5" opacity="0.45" />
+  <line x1="0" y1="490" x2="10" y2="490" stroke="#E8843C" stroke-width="1.5" opacity="0.45" />
+  <line x1="10" y1="490" x2="10" y2="500" stroke="#E8843C" stroke-width="1.5" opacity="0.45" />
+  <line x1="790" y1="490" x2="800" y2="490" stroke="#E8843C" stroke-width="1.5" opacity="0.45" />
+  <line x1="790" y1="490" x2="790" y2="500" stroke="#E8843C" stroke-width="1.5" opacity="0.45" />
+
+  <!-- ── TITLE ── -->
+  <text x="400" y="26" text-anchor="middle" fill="#E8843C" font-family="monospace" font-size="9" letter-spacing="3" opacity="0.8">PIXELFORGE · ARCHITECTURE</text>
+
+  <!-- ━━━━━━━━━━━━━━━━━━ ROW 1: page.tsx ━━━━━━━━━━━━━━━━━━ -->
+  <!-- Box -->
+  <rect x="225" y="44" width="280" height="50" rx="4" fill="#252220" stroke="#ffffff1c" stroke-width="1" />
+  <!-- Ember left accent bar -->
+  <rect x="225" y="44" width="3" height="50" rx="2" fill="#E8843C" opacity="0.6" />
+  <text x="368" y="65" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="13" font-weight="600">app/page.tsx</text>
+  <text x="368" y="83" text-anchor="middle" fill="#8B8580" font-family="monospace" font-size="9" letter-spacing="1">thin composition layer · no business logic</text>
+
+  <!-- Arrow: page.tsx → hooks -->
+  <line x1="365" y1="94" x2="365" y2="122" stroke="#E8843C" stroke-width="1" stroke-opacity="0.5" marker-end="url(#arr-ember)" />
+
+  <!-- ━━━━━━━━━━━━━━━━━━ ROW 2: Hooks ━━━━━━━━━━━━━━━━━━ -->
+  <!-- usePixelForge -->
+  <rect x="30" y="122" width="195" height="52" rx="4" fill="#252220" stroke="#ffffff1c" stroke-width="1" />
+  <text x="127" y="144" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="11">usePixelForge</text>
+  <text x="127" y="162" text-anchor="middle" fill="#8B8580" font-family="monospace" font-size="8">generation · AbortController</text>
+
+  <!-- useHistory -->
+  <rect x="240" y="122" width="175" height="52" rx="4" fill="#252220" stroke="#ffffff1c" stroke-width="1" />
+  <text x="327" y="144" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="11">useHistory</text>
+  <text x="327" y="162" text-anchor="middle" fill="#8B8580" font-family="monospace" font-size="8">localStorage · 10-entry cap</text>
+
+  <!-- useKeyboardShortcuts -->
+  <rect x="430" y="122" width="210" height="52" rx="4" fill="#252220" stroke="#ffffff1c" stroke-width="1" />
+  <text x="535" y="144" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="11">useKeyboardShortcuts</text>
+  <text x="535" y="162" text-anchor="middle" fill="#8B8580" font-family="monospace" font-size="8">global keydown · ref pattern</text>
+
+  <!-- Arrow: hooks → components -->
+  <line x1="365" y1="174" x2="365" y2="204" stroke="#E8843C" stroke-width="1" stroke-opacity="0.5" marker-end="url(#arr-ember)" />
+
+  <!-- ━━━━━━━━━━━━━━━━━━ ROW 3: Components ━━━━━━━━━━━━━━━━━━ -->
+  <rect x="30" y="204" width="615" height="108" rx="4" fill="#252220" stroke="#ffffff1c" stroke-width="1" />
+  <text x="338" y="220" text-anchor="middle" fill="#8B8580" font-family="monospace" font-size="8" letter-spacing="2">COMPONENTS</text>
+
+  <!-- Vertical dividers (three columns) -->
+  <line x1="235" y1="226" x2="235" y2="302" stroke="#ffffff0d" stroke-width="1" />
+  <line x1="440" y1="226" x2="440" y2="302" stroke="#ffffff0d" stroke-width="1" />
+  <!-- Horizontal divider -->
+  <line x1="50" y1="258" x2="625" y2="258" stroke="#ffffff0d" stroke-width="1" />
+
+  <!-- Row 1 of components -->
+  <text x="132" y="246" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="10">UploadDropzone</text>
+  <text x="338" y="246" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="10">PreviewCanvas</text>
+  <text x="533" y="246" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="10">CodePanel</text>
+
+  <!-- Row 2 of components -->
+  <text x="132" y="286" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="10">Toolbar</text>
+  <text x="338" y="286" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="10">HistoryDrawer</text>
+  <text x="533" y="286" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="10">ShortcutsDialog</text>
+
+  <!-- Arrow: components → lib -->
+  <line x1="365" y1="312" x2="365" y2="342" stroke="#E8843C" stroke-width="1" stroke-opacity="0.5" marker-end="url(#arr-ember)" />
+
+  <!-- ━━━━━━━━━━━━━━━━━━ ROW 4: lib ━━━━━━━━━━━━━━━━━━ -->
+  <rect x="30" y="342" width="615" height="54" rx="4" fill="#252220" stroke="#ffffff1c" stroke-width="1" />
+  <text x="338" y="358" text-anchor="middle" fill="#8B8580" font-family="monospace" font-size="8" letter-spacing="2">LIB</text>
+  <line x1="235" y1="362" x2="235" y2="386" stroke="#ffffff0d" stroke-width="1" />
+  <line x1="440" y1="362" x2="440" y2="386" stroke="#ffffff0d" stroke-width="1" />
+  <text x="132" y="380" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="10">types.ts</text>
+  <text x="338" y="380" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="10">preview.ts</text>
+  <text x="533" y="380" text-anchor="middle" fill="#F4EDE6" font-family="monospace" font-size="10">utils.ts</text>
+
+  <!-- ━━━━━━━━━━━━━━━━━━ EXTERNAL: /api/generate ━━━━━━━━━━━━━━━━━━ -->
+  <rect x="672" y="122" width="110" height="52" rx="4" fill="#1c1917" stroke="#E8843C" stroke-width="1" stroke-dasharray="5,3" opacity="0.8" />
+  <text x="727" y="144" text-anchor="middle" fill="#E8843C" font-family="monospace" font-size="10">/api/generate</text>
+  <text x="727" y="162" text-anchor="middle" fill="#8B8580" font-family="monospace" font-size="8">AI streaming endpoint</text>
+
+  <!-- Bidirectional arrow: usePixelForge ↔ /api/generate -->
+  <!-- Line from right edge of usePixelForge → left edge of /api/generate -->
+  <line x1="225" y1="148" x2="640" y2="148" stroke="#E8843C" stroke-width="1" stroke-opacity="0.35" stroke-dasharray="5,3" />
+  <!-- Arrowhead toward /api/generate -->
+  <polygon points="636,144 644,148 636,152" fill="#E8843C" opacity="0.55" />
+  <!-- Arrowhead back toward usePixelForge -->
+  <polygon points="229,144 221,148 229,152" fill="#E8843C" opacity="0.55" />
+  <text x="433" y="142" text-anchor="middle" fill="#E8843C" font-family="monospace" font-size="8" opacity="0.6">POST · stream</text>
+
+  <!-- ━━━━━━━━━━━━━━━━━━ EXTERNAL: sandboxed iframe ━━━━━━━━━━━━━━━━━━ -->
+  <rect x="672" y="246" width="110" height="52" rx="4" fill="#1c1917" stroke="#8B8580" stroke-width="1" stroke-dasharray="5,3" opacity="0.7" />
+  <text x="727" y="266" text-anchor="middle" fill="#8B8580" font-family="monospace" font-size="10">sandboxed iframe</text>
+  <text x="727" y="284" text-anchor="middle" fill="#6b6560" font-family="monospace" font-size="8">allow-scripts only</text>
+
+  <!-- Arrow: right edge of components box → sandboxed iframe -->
+  <line x1="645" y1="272" x2="672" y2="272" stroke="#8B8580" stroke-width="1" stroke-opacity="0.5" stroke-dasharray="5,3" marker-end="url(#arr-muted)" />
+  <text x="658" y="266" text-anchor="middle" fill="#8B8580" font-family="monospace" font-size="8" opacity="0.7">srcDoc</text>
+
+  <!-- Connection line from components box right edge to the arrow start -->
+  <line x1="645" y1="272" x2="645" y2="258" stroke="#8B8580" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="3,3" />
+  <line x1="645" y1="258" x2="645" y2="258" stroke="#8B8580" stroke-width="1" stroke-opacity="0.3" />
+
+  <!-- Footer label -->
+  <text x="400" y="478" text-anchor="middle" fill="#8B8580" font-family="monospace" font-size="8" letter-spacing="1" opacity="0.5">PIXELFORGE · hooks + components architecture</text>
+</svg>
