@@ -31,14 +31,20 @@
   <img src="assets/hero.png" alt="PixelForge in action — a Wikipedia screenshot being converted to live HTML and Tailwind in real time" style="width: 95%; height: auto; border-radius: 8px;" />
 </p>
 
-PixelForge is a screenshot-to-code tool with a deliberate point of view: it should feel less like a chat box and more like an engineering instrument. You drop a screenshot of any interface — a marketing hero, a dashboard, a Wikipedia article, a mobile app screen — and watch GPT-4o stream HTML and Tailwind back as the model writes it, with a live preview rendering the markup as each token arrives.
+PixelForge is a screenshot-to-code tool with a deliberate point of view: it should feel less like a chat box and more like an engineering instrument. Drop a screenshot of any interface — a marketing hero, a dashboard, a Wikipedia article, a mobile app screen — and watch GPT-4o stream HTML and Tailwind back as the model writes it, with a live preview rendering the markup as each token arrives.
 
 Built with Next.js 16, the Vercel AI SDK, and GPT-4o vision via GitHub Models.
 
 **Try it live:** [pixel-forge-three-nu.vercel.app](https://pixel-forge-three-nu.vercel.app/)
 
+<!-- BUCKET C — demo GIF (must be a real screen capture, cannot be AI-generated)
+     Record with ScreenToGif on Windows: capture the forge flow from upload → stream → live preview.
+     Save as assets/demo.gif and remove this comment. -->
+<!-- <p align="center"><img src="assets/demo.gif" alt="PixelForge live demo — screenshot to streamed HTML" style="width: 95%; border-radius: 8px;" /></p> -->
+
 ## What's new
 
+- **[2026/06]** History now persists across reloads — last 10 generations stored in localStorage with downscaled JPEG thumbnails that survive page refresh
 - **[2026/06]** Live deployment on Vercel — [pixel-forge-three-nu.vercel.app](https://pixel-forge-three-nu.vercel.app/)
 - **[2026/06]** Major UI overhaul: ember-on-graphite design language, hairline panels with corner registration ticks, live byte/line telemetry, real responsive layout
 - **[2026/06]** Generation history (last 10 in session), framework toggle (HTML or JSX), one-click download, device-width preview (desktop / tablet / mobile), keyboard shortcuts (paste, forge, copy, download, history)
@@ -48,15 +54,15 @@ Built with Next.js 16, the Vercel AI SDK, and GPT-4o vision via GitHub Models.
 
 ## Features
 
-The product does one thing, and tries to do it better than anything else.
+The product does one thing.
 
 - **Live token streaming.** Code appears progressively, not after a 30-second wait. First token typically lands within ~2 seconds.
 - **Live preview.** A sandboxed iframe with `srcDoc` renders the partial HTML using Tailwind's Play CDN. The preview updates as the model writes.
 - **Color and icon fidelity.** The system prompt explicitly demands real brand colors and inline SVG icons — not grayscale wireframes with icon names as text.
 - **HTML or JSX output.** Toggle between raw HTML and React-ready JSX. The server-side prompt swaps in a JSX rider that handles `className`, self-closing void elements, and camelCased event handlers.
-- **Session history.** The last 10 generations stay one click away. Restore any of them to keep iterating without losing earlier work.
+- **Persistent history.** The last 10 generations survive page refresh, stored in localStorage with downscaled JPEG thumbnails. Restore any of them to keep iterating without losing earlier work.
 - **Device-width preview.** Constrain the preview iframe to 375px (mobile) or 768px (tablet) to verify that generated breakpoints actually reflow.
-- **Real input ergonomics.** Drag-and-drop, click-to-upload, paste-a-screenshot with ⌘V/Ctrl+V — all three work, all three are how people actually use screenshots.
+- **Real input ergonomics.** Drag-and-drop, click-to-upload, and paste-a-screenshot with ⌘V/Ctrl+V. All three work because that's how people actually use screenshots.
 - **Keyboard-first controls.** ⌘Enter to forge, ⌘C to copy, ⌘S to download, ⌘/ for the shortcuts panel.
 - **Sandboxed by design.** `sandbox="allow-scripts"` with no `allow-same-origin` — generated content cannot reach back into the host app.
 
@@ -64,33 +70,55 @@ The product does one thing, and tries to do it better than anything else.
   <img src="assets/history.png" alt="The session history drawer, showing a previous generation with its source thumbnail, timestamp, byte count, and a Restore button" style="width: 95%; height: auto; border-radius: 8px;" />
 </p>
 
-## 📊 Architecture & Knowledge Graph
+## Architecture & Knowledge Graph
 
 This project includes a generated **knowledge graph** mapping all components, functions, utilities, and design decisions across the codebase.
 
-**Graph Stats:**
-- **225 nodes** (components, functions, configs, concepts, design notes)
-- **285 edges** (dependencies, references, semantic relationships)
-- **19 communities** (natural clusters of related functionality)
-- **Core abstractions:** `cn()` utility (27 connections), PixelForge Roadmap, streaming pipeline, UI components
+**Graph stats (as of last regeneration):**
+- **325 nodes** (components, functions, configs, concepts, design notes)
+- **454 edges** (dependencies, references, semantic relationships)
+- **24 communities** (natural clusters of related functionality)
+- **Core abstractions:** `PixelForge Application` (27 connections), `cn()` utility (23 connections), streaming pipeline, UI components
 
-### Explore the Architecture
+### Project structure
 
-- **Interactive 3D Graph:** [`docs/architecture/graph.html`](docs/architecture/graph.html) — open locally to zoom, pan, and click nodes
-- **Full Report:** [`docs/architecture/GRAPH_REPORT.md`](docs/architecture/GRAPH_REPORT.md) — communities, cohesion metrics, refactoring suggestions, isolated nodes
-- **Raw Graph Data:** [`docs/architecture/graph.json`](docs/architecture/graph.json) — structured data for programmatic use
+The codebase was refactored from a single `app/page.tsx` monolith into a layered architecture:
 
-### Why This Matters
+```
+app/
+  page.tsx                   — thin composition layer; orchestrates hooks + components
+  api/generate/route.ts      — AI streaming endpoint (unchanged)
+hooks/
+  usePixelForge.ts           — generation state machine; AbortController, object URL lifecycle
+  useHistory.ts              — localStorage persistence; SSR-safe, versioned key pixelforge:history:v1
+  useKeyboardShortcuts.ts    — global paste + keydown listeners; ref-pattern for stable registration
+components/
+  UploadDropzone.tsx         — drag-drop zone, file input, example loader
+  PreviewCanvas.tsx          — sandboxed iframe (sandbox="allow-scripts" only)
+  Toolbar.tsx                — output controls, framework toggle, device width, telemetry
+  CodePanel.tsx              — code view with line numbers
+  HistoryDrawer.tsx          — history dialog with downscaled JPEG thumbnails
+  ShortcutsDialog.tsx        — keyboard shortcuts dialog
+lib/
+  types.ts                   — shared type definitions (Status, Framework, HistoryEntry, etc.)
+  preview.ts                 — createPreviewDoc() for iframe srcDoc content
+  utils.ts                   — cn(), formatBytes(), createThumbnail()
+```
 
-The knowledge graph lets you (or anyone onboarding):
-- **Understand architecture instantly** — no need to read all 33 files
-- **Spot design flaws** — identifies isolated components, weak cohesion areas, missing edges
-- **Find integration points** — shows which nodes bridge communities (high-impact when changed)
-- **Plan refactors** — community cohesion scores suggest where to split modules
+### Explore the graph
 
-### Generated With
+- **Interactive 3D graph:** [`docs/architecture/graph.html`](docs/architecture/graph.html) — open locally to zoom, pan, and click nodes
+- **Full report:** [`docs/architecture/GRAPH_REPORT.md`](docs/architecture/GRAPH_REPORT.md) — communities, cohesion metrics, refactoring suggestions, isolated nodes
+- **Raw graph data:** [`docs/architecture/graph.json`](docs/architecture/graph.json) — structured data for programmatic use
 
-[graphify](https://github.com/slang-ai/graphify) + Claude subagents for semantic extraction
+The graph makes it possible to understand the architecture without reading every file. It identifies isolated components, weak cohesion areas, missing edges, and which nodes bridge communities, the ones that cost the most when changed.
+
+<!-- BUCKET B — architecture diagram (generated from code, not product UI) -->
+<p align="center">
+  <img src="assets/architecture.svg" alt="PixelForge architecture: page.tsx → hooks → components → lib, with /api/generate and sandboxed iframe boundaries" style="width: 95%; height: auto;" />
+</p>
+
+**Generated with** [graphify](https://github.com/slang-ai/graphify) + Claude subagents for semantic extraction.
 
 ---
 
@@ -187,11 +215,14 @@ GPT-4o ignores explicit "no code fences" instructions a meaningful fraction of t
 **Why a single dark theme?**
 The preview must render on white. Dark chrome around a white artboard reads like an instrument — drafting table, workbench, forge. A light theme would put the preview on the same brightness as the surrounding UI and dissolve the visual hierarchy. The trade-off is honest: this is a tool that does one job; a second theme would be decoration, not function.
 
+**Why localStorage for history instead of a database?**
+History is a local aid to iteration, not a shareable artifact. localStorage keeps it fast, private, and zero-infrastructure. Thumbnails are downscaled to a max of 200px on the long edge and stored as JPEG data URLs so they survive serialization across reloads — object URLs, which die with the page, are not used.
+
 ## Roadmap
 
 Near term:
 - [x] Production deployment on Vercel — [live](https://pixel-forge-three-nu.vercel.app/)
-- [ ] Persist session history and preferences across reloads
+- [x] Persist session history and preferences across reloads
 - [ ] Syntax highlighting in the Code view (Shiki)
 
 Mid term:
