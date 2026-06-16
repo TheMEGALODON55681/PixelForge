@@ -80,9 +80,9 @@ The product does one thing.
 This project includes a generated **knowledge graph** mapping all components, functions, utilities, and design decisions across the codebase.
 
 **Graph stats (as of last regeneration):**
-- **325 nodes** (components, functions, configs, concepts, design notes)
-- **454 edges** (dependencies, references, semantic relationships)
-- **24 communities** (natural clusters of related functionality)
+- **430 nodes** (components, functions, configs, concepts, design notes)
+- **575 edges** (dependencies, references, semantic relationships)
+- **30 communities** (natural clusters of related functionality)
 - **Core abstractions:** `PixelForge Application` (27 connections), `cn()` utility (23 connections), streaming pipeline, UI components
 
 ### Project structure
