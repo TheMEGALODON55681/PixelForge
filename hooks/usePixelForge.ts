@@ -13,6 +13,11 @@ const stripCodeFences = (code: string): string =>
     .replace(/\n?```\s*$/, '')
     .trim();
 
+/** Describes whichever generation request is currently "the last one" — what Retry repeats. */
+type LastAction =
+  | { kind: 'forge' }
+  | { kind: 'refine'; instruction: string; includeImage: boolean };
+
 export interface PixelForgeSource {
   file: File;
   url: string;
@@ -27,10 +32,14 @@ export interface UsePixelForge {
   bytes: number;
   lines: number;
   error: string | null;
+  /** The refinement instruction currently in flight, for the "Refining: …" label. Null otherwise. */
+  activeInstruction: string | null;
   setFramework: (f: Framework) => void;
   setSource: (file: File) => void;
   clearSource: () => void;
   forge: () => Promise<string | null>;
+  refine: (instruction: string, includeImage: boolean) => Promise<string | null>;
+  retry: () => Promise<string | null>;
   abort: () => void;
   reset: () => void;
   restoreCode: (code: string, framework: Framework) => void;
@@ -43,9 +52,17 @@ export function usePixelForge(): UsePixelForge {
   const [source, setSourceState] = useState<PixelForgeSource | null>(null);
   const [sourceMeta, setSourceMeta] = useState<{ w: number; h: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeInstruction, setActiveInstruction] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const urlRef = useRef<string | null>(null);
+  const lastActionRef = useRef<LastAction | null>(null);
+
+  // Mirrors `code` without forcing `execute` to be re-created on every streamed chunk.
+  const codeRef = useRef(code);
+  useEffect(() => {
+    codeRef.current = code;
+  }, [code]);
 
   const releaseUrl = useCallback(() => {
     if (urlRef.current) {
@@ -73,6 +90,7 @@ export function usePixelForge(): UsePixelForge {
       setSourceMeta(null);
       setError(null);
       setStatus('idle');
+      lastActionRef.current = null;
 
       const probe = new window.Image();
       probe.onload = () => setSourceMeta({ w: probe.naturalWidth, h: probe.naturalHeight });
@@ -88,70 +106,148 @@ export function usePixelForge(): UsePixelForge {
     setCode('');
     setStatus('idle');
     setError(null);
+    lastActionRef.current = null;
   }, [releaseUrl]);
+
+  /**
+   * Shared plumbing for every kind of generation request: cancels any in-flight
+   * stream, fires the new one, and reads it chunk-by-chunk into `code`. On
+   * failure the code is rolled back to whatever it was before this attempt
+   * (so a failed refinement doesn't leave a half-streamed document behind),
+   * and the action is remembered so `retry()` can repeat exactly this call.
+   */
+  const execute = useCallback(
+    async (action: LastAction, buildFormData: (previousCode: string) => FormData): Promise<string | null> => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      const snapshot = codeRef.current;
+      lastActionRef.current = action;
+      setActiveInstruction(action.kind === 'refine' ? action.instruction : null);
+      setStatus('forging');
+      setError(null);
+      setCode('');
+
+      try {
+        const formData = buildFormData(snapshot);
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Failed to generate code');
+        }
+        if (!response.body) throw new Error('No response stream');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = '';
+
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          accumulated += decoder.decode(value, { stream: true });
+          setCode(stripCodeFences(accumulated));
+        }
+
+        const finalCode = stripCodeFences(accumulated);
+        if (!finalCode) {
+          // The model/provider can fail *after* the response has already started
+          // streaming with a 200 (e.g. an auth rejection mid-stream) — that surfaces
+          // here as a clean, empty stream rather than a thrown error. Treat it as a
+          // failure too; a Ready status with a blank panel is a silent hang in disguise.
+          throw new Error('Received an empty response — the model may be unavailable. Try again.');
+        }
+        setCode(finalCode);
+        setStatus('ready');
+        toast.success(action.kind === 'refine' ? 'Refined' : 'Forged', {
+          description: 'Code is ready to copy',
+        });
+        return finalCode;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return null;
+        const message = err instanceof Error ? err.message : 'Something went wrong';
+        setCode(snapshot);
+        setError(message);
+        setStatus('error');
+        toast.error(message);
+        return null;
+      } finally {
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+        }
+      }
+    },
+    [],
+  );
+
+  const buildForgeFormData = useCallback(
+    (file: File) => {
+      const formData = new FormData();
+      formData.append('mode', 'initial');
+      formData.append('image', file);
+      formData.append('framework', framework);
+      return formData;
+    },
+    [framework],
+  );
+
+  const buildRefineFormData = useCallback(
+    (instruction: string, includeImage: boolean, previousCode: string) => {
+      const formData = new FormData();
+      formData.append('mode', 'refine');
+      formData.append('instruction', instruction);
+      formData.append('previousCode', previousCode);
+      formData.append('framework', framework);
+      if (includeImage && source) formData.append('image', source.file);
+      return formData;
+    },
+    [framework, source],
+  );
 
   const forge = useCallback(async (): Promise<string | null> => {
     if (!source) {
       toast.error('Add a screenshot to forge from');
       return null;
     }
+    return execute({ kind: 'forge' }, () => buildForgeFormData(source.file));
+  }, [source, buildForgeFormData, execute]);
 
-    // Cancel any in-flight generation before starting a new one.
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setStatus('forging');
-    setCode('');
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('image', source.file);
-      formData.append('framework', framework);
-
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        body: formData,
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to generate code');
+  const refine = useCallback(
+    async (instruction: string, includeImage: boolean): Promise<string | null> => {
+      const trimmed = instruction.trim();
+      if (!trimmed) return null;
+      if (status !== 'ready') {
+        toast.error('Forge a generation before refining it');
+        return null;
       }
-      if (!response.body) throw new Error('No response stream');
+      return execute({ kind: 'refine', instruction: trimmed, includeImage }, (previousCode) =>
+        buildRefineFormData(trimmed, includeImage, previousCode),
+      );
+    },
+    [status, buildRefineFormData, execute],
+  );
 
-      /** Reads the text stream chunk-by-chunk, updating live code state on every token. */
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = '';
+  const retry = useCallback(async (): Promise<string | null> => {
+    const action = lastActionRef.current;
+    if (!action) return null;
 
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-        setCode(stripCodeFences(accumulated));
+    if (action.kind === 'forge') {
+      if (!source) {
+        toast.error('Add a screenshot to forge from');
+        return null;
       }
-
-      const finalCode = stripCodeFences(accumulated);
-      setCode(finalCode);
-      setStatus('ready');
-      toast.success('Forged', { description: 'Code is ready to copy' });
-      return finalCode;
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return null;
-      const message = err instanceof Error ? err.message : 'Something went wrong';
-      setError(message);
-      setStatus('error');
-      toast.error(message);
-      return null;
-    } finally {
-      if (abortRef.current === controller) {
-        abortRef.current = null;
-      }
+      return execute(action, () => buildForgeFormData(source.file));
     }
-  }, [source, framework]);
+
+    return execute(action, (previousCode) =>
+      buildRefineFormData(action.instruction, action.includeImage, previousCode),
+    );
+  }, [source, buildForgeFormData, buildRefineFormData, execute]);
 
   const abort = useCallback(() => {
     abortRef.current?.abort();
@@ -162,6 +258,8 @@ export function usePixelForge(): UsePixelForge {
     setCode('');
     setStatus('idle');
     setError(null);
+    setActiveInstruction(null);
+    lastActionRef.current = null;
   }, []);
 
   const restoreCode = useCallback((restoredCode: string, restoredFramework: Framework) => {
@@ -169,6 +267,8 @@ export function usePixelForge(): UsePixelForge {
     setFramework(restoredFramework);
     setStatus('ready');
     setError(null);
+    setActiveInstruction(null);
+    lastActionRef.current = null;
   }, []);
 
   // Cleanup on unmount: cancel any in-flight stream and revoke the source blob URL.
@@ -195,10 +295,13 @@ export function usePixelForge(): UsePixelForge {
     bytes,
     lines,
     error,
+    activeInstruction,
     setFramework,
     setSource,
     clearSource,
     forge,
+    refine,
+    retry,
     abort,
     reset,
     restoreCode,

@@ -78,6 +78,22 @@ Do NOT use placehold.co. Instead, render placeholders as Tailwind-styled <div>s 
 
 Goal: when rendered, the output is visually recognizable as the screenshot — same colors, same icons, same layout density. A developer can paste this directly into a project.`;
 
+/*
+  Refinement rider — appended only when mode === "refine".
+
+  The model is no longer reconstructing a screenshot from scratch; it's editing
+  a document it already wrote. The instruction and the existing code travel in
+  the user message (see below), but the contract change belongs in the system
+  prompt: apply the change, return the whole document, don't explain yourself.
+*/
+const REFINEMENT_RIDER = `
+
+==================== REFINEMENT MODE ====================
+You are not generating from scratch. Here is existing code. Apply the requested change. Return the FULL updated document — no fences, no preamble, no partial diffs.
+- Make only the change that was asked for. Leave everything else exactly as it was.
+- Never reply with just the changed fragment, a diff, or an explanation — the output replaces the existing document entirely, so anything you omit is lost.
+- Keep the same output contract as before: begin with the first tag, end with the last closing tag, no markdown fences, no commentary.`;
+
 const JSX_RIDER = `
 
 ==================== JSX OUTPUT RULES ====================
@@ -103,16 +119,30 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let mode = "initial";
   let image: File | null = null;
   let framework = "html";
+  let instruction = "";
+  let previousCode = "";
 
   try {
     const formData = await req.formData();
+    const m = formData.get("mode") as string | null;
+    if (m) mode = m;
     image = formData.get("image") as File | null;
     const fw = formData.get("framework") as string | null;
     if (fw) framework = fw;
+    instruction = ((formData.get("instruction") as string | null) ?? "").trim();
+    previousCode = (formData.get("previousCode") as string | null) ?? "";
   } catch {
     return new Response("Malformed multipart form data", { status: 400 });
+  }
+
+  // Validate mode
+  if (mode !== "initial" && mode !== "refine") {
+    return new Response('Invalid mode. Must be "initial" or "refine".', {
+      status: 400,
+    });
   }
 
   // Validate framework
@@ -123,39 +153,63 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!image) return new Response("No image provided", { status: 400 });
-  if (!image.type.startsWith("image/"))
-    return new Response("File must be an image", { status: 400 });
-  if (image.size > MAX_BYTES)
-    return new Response("Image must be smaller than 10MB", { status: 400 });
-  if (image.size === 0)
-    return new Response("Image file is empty", { status: 400 });
+  if (mode === "initial") {
+    if (!image) return new Response("No image provided", { status: 400 });
+  } else {
+    if (!instruction)
+      return new Response("Refinement instruction is required", { status: 400 });
+    if (!previousCode)
+      return new Response("previousCode is required for a refinement", {
+        status: 400,
+      });
+  }
+
+  // The image is required for "initial", optional (visual context) for "refine".
+  if (image) {
+    if (!image.type.startsWith("image/"))
+      return new Response("File must be an image", { status: 400 });
+    if (image.size > MAX_BYTES)
+      return new Response("Image must be smaller than 10MB", { status: 400 });
+    if (image.size === 0)
+      return new Response("Image file is empty", { status: 400 });
+  }
 
   try {
-    const bytes = await image.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString("base64");
-    const dataUrl = `data:${image.type};base64,${base64}`;
+    let systemPrompt: string =
+      framework === "jsx" ? BASE_SYSTEM_PROMPT + JSX_RIDER : BASE_SYSTEM_PROMPT;
+    if (mode === "refine") systemPrompt += REFINEMENT_RIDER;
 
-    const systemPrompt =
-      framework === "jsx"
-        ? BASE_SYSTEM_PROMPT + JSX_RIDER
-        : BASE_SYSTEM_PROMPT;
+    const content: (
+      | { type: "text"; text: string }
+      | { type: "image"; image: string }
+    )[] = [];
+
+    if (mode === "refine") {
+      content.push({
+        type: "text",
+        text: `Existing code:\n\n${previousCode}\n\nRequested change: ${instruction}\n\nReturn the FULL updated document with this change applied. No fences, no preamble, no partial diffs.`,
+      });
+    } else {
+      content.push({
+        type: "text",
+        text: "Reproduce this UI faithfully. Match its real colors (not grayscale). Use inline SVG for every icon. Use gradient <div> placeholders sized to the correct aspect ratio instead of placehold.co. Output begins with the first HTML tag.",
+      });
+    }
+
+    if (image) {
+      const bytes = await image.arrayBuffer();
+      const base64 = Buffer.from(bytes).toString("base64");
+      const dataUrl = `data:${image.type};base64,${base64}`;
+      if (mode === "refine") {
+        content.push({ type: "text", text: "Reference screenshot for visual fidelity:" });
+      }
+      content.push({ type: "image", image: dataUrl });
+    }
 
     const result = streamText({
       model: github.chat("openai/gpt-4o"),
       system: systemPrompt,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Reproduce this UI faithfully. Match its real colors (not grayscale). Use inline SVG for every icon. Use gradient <div> placeholders sized to the correct aspect ratio instead of placehold.co. Output begins with the first HTML tag.",
-            },
-            { type: "image", image: dataUrl },
-          ],
-        },
-      ],
+      messages: [{ role: "user", content }],
       // Slightly higher than v1's 0.2 — enough latitude for color/gradient
       // choices without losing structural reliability.
       temperature: 0.35,

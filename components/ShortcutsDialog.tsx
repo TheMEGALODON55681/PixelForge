@@ -6,6 +6,7 @@ import type { ShortcutItem } from '@/lib/types';
 const SHORTCUTS: ShortcutItem[] = [
   { keys: ['Ctrl+V'], action: 'Paste image from clipboard' },
   { keys: ['Ctrl+Enter'], action: 'Forge / re-forge code' },
+  { keys: ['Ctrl+Enter'], action: 'Submit refinement (when focused there)' },
   { keys: ['Ctrl+C'], action: 'Copy generated code' },
   { keys: ['Ctrl+S'], action: 'Download generated code' },
   { keys: ['Ctrl+H'], action: 'Toggle history drawer' },

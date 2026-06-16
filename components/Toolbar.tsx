@@ -2,7 +2,7 @@
 
 import { Check, Copy, Download, Maximize2, Monitor, RotateCw, Smartphone, Tablet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { createPreviewDoc } from '@/lib/preview';
 import { formatBytes } from '@/lib/utils';
@@ -53,24 +53,14 @@ export function Toolbar({
           <TabsTrigger value="code">Code</TabsTrigger>
         </TabsList>
 
-        {/* Framework toggle — uses TabsList/TabsTrigger as a styled button group.
-            data-state is set manually because these triggers don't own TabsContent. */}
-        <TabsList>
-          <TabsTrigger
-            value="html"
-            data-state={framework === 'html' ? 'active' : 'inactive'}
-            onClick={() => onFrameworkChange('html')}
-          >
-            HTML
-          </TabsTrigger>
-          <TabsTrigger
-            value="jsx"
-            data-state={framework === 'jsx' ? 'active' : 'inactive'}
-            onClick={() => onFrameworkChange('jsx')}
-          >
-            JSX
-          </TabsTrigger>
-        </TabsList>
+        {/* Framework toggle — its own Tabs root so it doesn't share roving focus or
+            active state with the Preview/Code tabs above (they're unrelated axes). */}
+        <Tabs value={framework} onValueChange={(v) => onFrameworkChange(v as Framework)}>
+          <TabsList>
+            <TabsTrigger value="html">HTML</TabsTrigger>
+            <TabsTrigger value="jsx">JSX</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

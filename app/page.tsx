@@ -13,6 +13,7 @@ import { UploadDropzone } from '@/components/UploadDropzone';
 import { PreviewCanvas } from '@/components/PreviewCanvas';
 import { CodePanel } from '@/components/CodePanel';
 import { Toolbar } from '@/components/Toolbar';
+import { RefinementBar } from '@/components/RefinementBar';
 import { HistoryDrawer } from '@/components/HistoryDrawer';
 import { ShortcutsDialog } from '@/components/ShortcutsDialog';
 import { createThumbnail, formatBytes } from '@/lib/utils';
@@ -59,10 +60,14 @@ export default function Home() {
     sourceMeta,
     bytes,
     lines,
+    error,
+    activeInstruction,
     setFramework,
     setSource,
     clearSource,
     forge,
+    refine,
+    retry,
     restoreCode,
   } = usePixelForge();
 
@@ -94,25 +99,45 @@ export default function Home() {
     }
   }, [deviceWidth]);
 
+  /** Archives a just-completed generation (forge, refine, or retry of either) to history. */
+  const archiveResult = useCallback(
+    async (finalCode: string) => {
+      let thumbnail = '';
+      try {
+        if (source) thumbnail = await createThumbnail(source.url);
+      } catch {
+        // Thumbnail generation failed — entry still added, just without a preview image.
+      }
+      const entry: HistoryEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: Date.now(),
+        framework,
+        byteCount: new TextEncoder().encode(finalCode).length,
+        code: finalCode,
+        thumbnail,
+      };
+      addToHistory(entry);
+    },
+    [source, framework, addToHistory],
+  );
+
   const handleForge = useCallback(async () => {
     const finalCode = await forge();
-    if (finalCode === null || !source) return;
-    let thumbnail = '';
-    try {
-      thumbnail = await createThumbnail(source.url);
-    } catch {
-      // Thumbnail generation failed — entry still added, just without a preview image.
-    }
-    const entry: HistoryEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      timestamp: Date.now(),
-      framework,
-      byteCount: new TextEncoder().encode(finalCode).length,
-      code: finalCode,
-      thumbnail,
-    };
-    addToHistory(entry);
-  }, [forge, source, framework, addToHistory]);
+    if (finalCode !== null) await archiveResult(finalCode);
+  }, [forge, archiveResult]);
+
+  const handleRefine = useCallback(
+    async (instruction: string, includeImage: boolean) => {
+      const finalCode = await refine(instruction, includeImage);
+      if (finalCode !== null) await archiveResult(finalCode);
+    },
+    [refine, archiveResult],
+  );
+
+  const handleRetry = useCallback(async () => {
+    const finalCode = await retry();
+    if (finalCode !== null) await archiveResult(finalCode);
+  }, [retry, archiveResult]);
 
   const handleCopy = useCallback(async () => {
     if (!code) return;
@@ -321,9 +346,22 @@ export default function Home() {
               </TabsContent>
 
               <TabsContent value="code" className="mt-0 flex-1">
-                <CodePanel code={code} />
+                <CodePanel
+                  code={code}
+                  framework={framework}
+                  status={status}
+                  error={error}
+                  onRetry={handleRetry}
+                />
               </TabsContent>
             </Tabs>
+
+            <RefinementBar
+              status={status}
+              activeInstruction={activeInstruction}
+              hasSourceImage={!!source}
+              onSubmit={handleRefine}
+            />
           </section>
         </div>
       </div>

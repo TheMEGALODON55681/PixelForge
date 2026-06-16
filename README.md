@@ -44,6 +44,8 @@ Built with Next.js 16, the Vercel AI SDK, and GPT-4o vision via GitHub Models.
 
 ## What's new
 
+- **[2026/06]** Refinement loop — once a generation is Ready, describe a follow-up change ("make the header sticky") instead of starting over; the model streams back a full updated document, not a diff, and the previous version moves to history
+- **[2026/06]** Syntax-highlighted Code view via Shiki — themed to the panel, applied once a generation is Ready so streaming stays plain text and fast
 - **[2026/06]** History now persists across reloads — last 10 generations stored in localStorage with downscaled JPEG thumbnails that survive page refresh
 - **[2026/06]** Live deployment on Vercel — [pixel-forge-three-nu.vercel.app](https://pixel-forge-three-nu.vercel.app/)
 - **[2026/06]** Major UI overhaul: ember-on-graphite design language, hairline panels with corner registration ticks, live byte/line telemetry, real responsive layout
@@ -60,10 +62,13 @@ The product does one thing.
 - **Live preview.** A sandboxed iframe with `srcDoc` renders the partial HTML using Tailwind's Play CDN. The preview updates as the model writes.
 - **Color and icon fidelity.** The system prompt explicitly demands real brand colors and inline SVG icons — not grayscale wireframes with icon names as text.
 - **HTML or JSX output.** Toggle between raw HTML and React-ready JSX. The server-side prompt swaps in a JSX rider that handles `className`, self-closing void elements, and camelCased event handlers.
+- **Refinement loop.** Once a generation is Ready, describe a change — "make the header sticky" — instead of re-forging from scratch. The model reworks the current code in place, optionally re-sending the original screenshot for fidelity, and streams the full replacement document into the same Code and Preview surface.
+- **Syntax-highlighted code.** The Code view renders plain text while streaming and switches to full Shiki highlighting once a generation is Ready, themed to match the panel. Toggling HTML/JSX re-highlights with the correct grammar.
 - **Persistent history.** The last 10 generations survive page refresh, stored in localStorage with downscaled JPEG thumbnails. Restore any of them to keep iterating without losing earlier work.
 - **Device-width preview.** Constrain the preview iframe to 375px (mobile) or 768px (tablet) to verify that generated breakpoints actually reflow.
 - **Real input ergonomics.** Drag-and-drop, click-to-upload, and paste-a-screenshot with ⌘V/Ctrl+V. All three work because that's how people actually use screenshots.
 - **Keyboard-first controls.** ⌘Enter to forge, ⌘C to copy, ⌘S to download, ⌘/ for the shortcuts panel.
+- **Error recovery.** A failed generation surfaces a toast and an inline error block with a Retry button — it re-runs the last action, whether that was an initial forge or a refinement. A cancelled generation is never shown as an error.
 - **Sandboxed by design.** `sandbox="allow-scripts"` with no `allow-same-origin` — generated content cannot reach back into the host app.
 
 <p align="center">
@@ -87,20 +92,22 @@ The codebase was refactored from a single `app/page.tsx` monolith into a layered
 ```
 app/
   page.tsx                   — thin composition layer; orchestrates hooks + components
-  api/generate/route.ts      — AI streaming endpoint (unchanged)
+  api/generate/route.ts      — AI streaming endpoint; initial and refinement modes
 hooks/
-  usePixelForge.ts           — generation state machine; AbortController, object URL lifecycle
+  usePixelForge.ts           — generation state machine; forge/refine/retry, AbortController, object URL lifecycle
   useHistory.ts              — localStorage persistence; SSR-safe, versioned key pixelforge:history:v1
   useKeyboardShortcuts.ts    — global paste + keydown listeners; ref-pattern for stable registration
 components/
   UploadDropzone.tsx         — drag-drop zone, file input, example loader
   PreviewCanvas.tsx          — sandboxed iframe (sandbox="allow-scripts" only)
   Toolbar.tsx                — output controls, framework toggle, device width, telemetry
-  CodePanel.tsx              — code view with line numbers
+  CodePanel.tsx              — code view with line numbers, Shiki highlighting, error + retry state
+  RefinementBar.tsx          — follow-up instruction input that drives the refinement loop
   HistoryDrawer.tsx          — history dialog with downscaled JPEG thumbnails
   ShortcutsDialog.tsx        — keyboard shortcuts dialog
 lib/
   types.ts                   — shared type definitions (Status, Framework, HistoryEntry, etc.)
+  highlight.ts               — lazy-loaded Shiki singleton for the Code view
   preview.ts                 — createPreviewDoc() for iframe srcDoc content
   utils.ts                   — cn(), formatBytes(), createThumbnail()
 ```
@@ -118,7 +125,7 @@ The graph makes it possible to understand the architecture without reading every
   <img src="assets/architecture.svg" alt="PixelForge architecture: page.tsx → hooks → components → lib, with /api/generate and sandboxed iframe boundaries" style="width: 95%; height: auto;" />
 </p>
 
-**Generated with** [graphify](https://github.com/slang-ai/graphify) + Claude subagents for semantic extraction.
+**Generated with** [graphify](https://github.com/slang-ai/graphify).
 
 ---
 
@@ -128,7 +135,7 @@ PixelForge breaks down screenshot-to-code into a streaming pipeline:
 
 1. **Upload stage.** The image is validated client-side (type, size up to 10MB), then sent as multipart form data to the `/api/generate` route handler.
 
-2. **Inference stage.** The route handler base64-encodes the image and constructs a multimodal chat completion request to GPT-4o via GitHub Models. A fidelity-tuned system prompt demands semantic HTML with Tailwind utility classes, inline SVG icons, real brand colors, and gradient placeholders for images — no markdown fences, no preamble.
+2. **Inference stage.** The route handler base64-encodes the image and constructs a multimodal chat completion request to GPT-4o via GitHub Models. A fidelity-tuned system prompt demands semantic HTML with Tailwind utility classes, inline SVG icons, real brand colors, and gradient placeholders for images — no markdown fences, no preamble. A refinement request swaps in the existing code and a natural-language instruction in place of a fresh screenshot. A rider in the system prompt requires the model to return the full updated document, never a diff.
 
 3. **Streaming stage.** The model's response is returned as a text stream using the Vercel AI SDK's `streamText` → `toTextStreamResponse()`. The client reads the `ReadableStream` chunk-by-chunk and updates state on every token. An `AbortController` cancels in-flight work if the user re-submits or navigates away.
 
@@ -145,6 +152,7 @@ PixelForge breaks down screenshot-to-code into a streaming pipeline:
 | AI integration | Vercel AI SDK |
 | Model | GPT-4o via GitHub Models |
 | Icons | Lucide React |
+| Syntax highlighting | Shiki |
 | Notifications | Sonner |
 | Hosting | Vercel |
 
@@ -190,6 +198,7 @@ Open [http://localhost:3000](http://localhost:3000).
 |-----|--------|
 | `⌘V` / `Ctrl+V` | Paste a screenshot from the clipboard |
 | `⌘Enter` / `Ctrl+Enter` | Forge / re-forge code |
+| `⌘Enter` / `Ctrl+Enter` | Submit a refinement (when the Refine input is focused) |
 | `⌘C` / `Ctrl+C` | Copy generated code |
 | `⌘S` / `Ctrl+S` | Download generated code |
 | `⌘H` / `Ctrl+H` | Toggle the history drawer |
@@ -222,11 +231,12 @@ History is a local aid to iteration, not a shareable artifact. localStorage keep
 
 Near term:
 - [x] Production deployment on Vercel — [live](https://pixel-forge-three-nu.vercel.app/)
-- [x] Persist session history and preferences across reloads
-- [ ] Syntax highlighting in the Code view (Shiki)
+- [x] Persist session history across reloads
+- [ ] Persist framework/device-width preferences across reloads
+- [x] Syntax highlighting in the Code view (Shiki)
 
 Mid term:
-- [ ] **Refinement loop** — "make the header sticky," "use a 3-column grid" — re-runs the model with the previous code + a natural-language instruction
+- [x] **Refinement loop** — "make the header sticky," "use a 3-column grid" — re-runs the model with the previous code + a natural-language instruction
 - [ ] Multi-framework output: HTML, React (JSX/TSX), Vue SFC
 - [ ] Element-level inspection: redraw a region of the screenshot and regenerate just that fragment
 - [ ] Automated accessibility audit of generated output

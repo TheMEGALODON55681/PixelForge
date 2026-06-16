@@ -18,33 +18,30 @@ decoration?* Decoration is rejected.
 These finish the current feature set and remove the small rough edges noted
 during integration. High confidence, low risk.
 
-### 1. Decouple the framework toggle from the Tabs context
-**Why.** The HTML/JSX toggle is currently rendered as `TabsTrigger`s inside the
-same `<Tabs>` as Preview/Code, so Radix groups all four into one keyboard
-roving-focus ring. It works by mouse but is subtly wrong for keyboard users.
-**What.** Replace the two framework `TabsTrigger`s with a small dedicated
-segmented button group (still styled to match the radix-nova `TabsList` look).
-**Effort.** S. **Risk.** Low.
+### 1. Decouple the framework toggle from the Tabs context ✅ Shipped
+**Shipped.** The HTML/JSX toggle now has its own nested `<Tabs>` root in
+`Toolbar.tsx`, separate from the Preview/Code `Tabs` root — simpler than the
+proposed standalone button group, and the radix-nova `TabsList` styling comes
+for free. This turned out to be more than a keyboard-focus quirk: sharing one
+root meant clicking JSX silently blanked the Preview/Code panel, since Radix
+only renders content for the active tab's `value` and "jsx" matched neither.
 
-### 2. Persist history and preferences across reloads
-**Why.** History is currently session-only by design, but losing it on refresh
-is the #1 thing a returning user will miss. The original PRD deferred this
-deliberately; it has now earned its place.
-**What.** Persist the last 10 generations and the framework/device preference.
-Because artifacts/iframes can't use `localStorage` reliably and the images are
-blobs, store the *generated code + metadata* in IndexedDB and re-derive
-thumbnails lazily, or store a downscaled data-URL thumbnail. Keep a hard cap and
-a "clear history" control.
-**Effort.** M. **Risk.** Medium (storage quotas, blob lifecycle).
+### 2. Persist history and preferences across reloads ⚠️ Partially shipped
+**Shipped (history only).** The last 10 generations persist across reloads —
+`useHistory.ts`, keyed `pixelforge:history:v1` in `localStorage`. Simpler than
+the proposed IndexedDB approach: thumbnails are downscaled to JPEG data URLs
+up front, so there's no blob to manage and plain `localStorage` is enough.
+The other half of this item never landed — framework and device-width
+preference still reset to their defaults on every reload.
 
-### 3. Syntax highlighting in the Code view
-**Why.** The code panel is monospace plain text. For a developer tool, real
-highlighting is table stakes and dramatically improves scannability.
-**What.** Add Shiki (compile-time, zero runtime JS, themeable to the
-ember-on-graphite palette) or `react-syntax-highlighter`. Shiki is the better
-fit — it can be tuned to the exact token colors of the design system.
-**Effort.** M. **Risk.** Low. Note: this is the first dependency worth adding;
-justify it in the PR.
+### 3. Syntax highlighting in the Code view ✅ Shipped
+**Shipped.** Shiki, dynamically imported as a singleton in `lib/highlight.ts`
+and applied in `CodePanel.tsx` once `status === 'ready'` — plain text while
+streaming, themed to `github-dark` with the background overridden to match
+the panel. One correction to the original framing: this isn't zero-runtime-JS.
+The highlighter and grammars are real client-side JS, just lazy-loaded on
+first use instead of bundled upfront — confirmed via a production build that
+nothing Shiki-related loads until a generation actually reaches Ready.
 
 ### 4. "Copy" → richer export menu
 **Why.** Copy and Download exist separately. Power users want options.
@@ -73,16 +70,14 @@ server prompt already has a rider pattern — add riders per target. Consider a
 "component vs. page" switch too.
 **Effort.** M–L. **Risk.** Medium (prompt quality per target must be validated).
 
-### 7. Refinement loop ("nudge the output")
-**Why.** The model's first pass is rarely perfect. Today the only recourse is
-"Forge again" (a fresh roll). A *conversational refinement* — "make the header
-sticky," "use a 3-column grid," "match the blue more closely" — turns a one-shot
-tool into an iterative one. This is the feature most likely to make the product
-*remembered*.
-**What.** Below the output, a single text input: "Describe a change." It re-calls
-the model with the current code + the screenshot + the instruction, streaming a
-revised version. Keep each revision in history (ties into item 2).
-**Effort.** L. **Risk.** Medium. This is the marquee feature of the mid term.
+### 7. Refinement loop ("nudge the output") ✅ Shipped
+**Shipped.** A `RefinementBar` below the output, gated on `status === 'ready'`,
+re-calls `/api/generate` in a new `refine` mode with the current code, the
+instruction, and the original screenshot (toggleable, on by default) instead
+of a fresh roll. Each revision streams in as a full document, never a diff,
+and lands in history exactly like a forge does — so item 2's persistence
+covers it with no extra work. Retry (new, see error-handling work) replays a
+failed refinement rather than falling back to a fresh forge.
 
 ### 8. Element-level inspection / partial regeneration
 **Why.** Sometimes only one section is wrong. Regenerating everything is wasteful.
@@ -162,8 +157,10 @@ set with shared styling extracted across them.
 ## Housekeeping (carried from FOLLOWUPS.md)
 
 - Remove `next-themes` (installed, unused — the redesign decoupled sonner from it).
-- Decide on `input.tsx` / `textarea.tsx` (unused now; item 7 will need an input —
-  keep them).
+- ~~Decide on `input.tsx` / `textarea.tsx` (unused now; item 7 will need an
+  input — keep them).~~ Resolved: both were removed in a prior cleanup before
+  item 7 shipped. `RefinementBar.tsx` uses a plain styled `<input>` instead of
+  reintroducing either primitive.
 - Replace `assets/screenshot.png` / `public/example.png` with a real product
   screenshot when one is available (current one is a generic AI-generated
   dashboard — fine as a placeholder).
