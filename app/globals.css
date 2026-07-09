@@ -6,30 +6,23 @@
 
 /*
   Token contract for shadcn primitives is preserved verbatim (names unchanged),
-  so Button/Card/Tabs/Dialog/Input keep working untouched. What changed:
+  so Button/Card/Tabs/Dialog/Input keep working untouched. What changed: the
+  values now carry the Forge and Steel system (paper and steel, light by
+  default) instead of the earlier dark instrument palette, and the type
+  variables point at the three fonts layout.tsx exposes (display, body,
+  utility) instead of Geist. See DESIGN.md for the full token reference.
 
-  1. The fonts are now wired to the variables layout.tsx actually exposes
-     (--font-geist-sans / --font-geist-mono). Previously --font-sans pointed at
-     itself and silently fell back to a system font.
-
-  2. The product is intentionally a single dark "instrument" surface, so the
-     canonical palette lives in :root (not only under .dark). This makes the
-     theme correct even if the .dark class is ever missing — removing an entire
-     class of "dark mode didn't apply" bugs. The .dark block mirrors :root so
-     next-themes / .dark consumers still resolve identical values.
-
-  Identity: ember (warm amber) accent on warm graphite "ink". A forge, not a
-  marketing hero. Neutrals carry a faint warm hue so the surface reads like
-  graphite/paper rather than dead black.
+  Identity: molten orange, the one accent, on paper and steel neutrals. A
+  workshop bench, not a dark terminal.
 */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-utility);
+  --font-heading: var(--font-display);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -61,102 +54,100 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  /* Brand tokens for the instrument chrome. */
+  /* Brand tokens for the workspace chrome. */
   --color-ember: var(--ember);
+  --color-ember-strong: var(--ember-strong);
   --color-rule: var(--rule);
+  --color-rule-structural: var(--rule-structural);
+  --color-code-ink: var(--code-ink);
 
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Radius, the 9px signature scale (see DESIGN.md). Nested corners run
+     2-4px tighter than their parent so corners stay concentric. */
+  --radius-sm: var(--radius-micro);
+  --radius-md: var(--radius-standard);
+  --radius-lg: var(--radius-forge);
+  --radius-xl: var(--radius-panel);
+  --radius-2xl: var(--radius-shell);
 }
 
-/* Canonical (dark instrument) palette. */
 :root {
-  --background: oklch(0.165 0.006 67);
-  --foreground: oklch(0.955 0.004 80);
+  /* Forge and Steel primitives. */
+  --pf-orange-600: #e64a19;
+  --pf-orange-700: #b23a13;
+  --pf-paper-50: #faf8f3;
+  --pf-paper-100: #f1ece0;
+  --pf-paper-0: #ffffff;
+  --pf-steel-900: #1b1c19;
+  --pf-steel-700: #3a4250;
+  --pf-steel-500: #6b7280;
+  --pf-steel-300: #a8aeb8;
+  --pf-steel-100: #e9ecf0;
+  --pf-line-warm: #e4decf;
+  --pf-line-cool: #d5dae1;
+  --pf-code-ink-900: #121417;
+  --pf-error-600: #ba1a1a;
 
-  --card: oklch(0.198 0.006 67);
-  --card-foreground: oklch(0.955 0.004 80);
-  --popover: oklch(0.208 0.007 67);
-  --popover-foreground: oklch(0.955 0.004 80);
+  /* Tailwind token contract (mapped to Forge and Steel). */
+  --background: var(--pf-paper-50);
+  --foreground: var(--pf-steel-900);
 
-  /* Ember accent. */
-  --primary: oklch(0.745 0.158 55);
-  --primary-foreground: oklch(0.185 0.02 60);
+  --card: var(--pf-paper-0);
+  --card-foreground: var(--pf-steel-900);
+  --popover: var(--pf-paper-0);
+  --popover-foreground: var(--pf-steel-900);
 
-  --secondary: oklch(0.265 0.007 67);
-  --secondary-foreground: oklch(0.955 0.004 80);
-  --muted: oklch(0.255 0.006 67);
-  --muted-foreground: oklch(0.715 0.012 70);
-  --accent: oklch(0.275 0.02 60);
-  --accent-foreground: oklch(0.955 0.004 80);
+  /* Molten accent. The only accent. */
+  --primary: var(--pf-orange-600);
+  --primary-foreground: var(--pf-paper-0);
 
-  --destructive: oklch(0.62 0.21 27);
+  --secondary: var(--pf-paper-100);
+  --secondary-foreground: var(--pf-steel-900);
+  --muted: var(--pf-steel-100);
+  --muted-foreground: var(--pf-steel-500);
+  --accent: var(--pf-orange-600);
+  --accent-foreground: var(--pf-paper-0);
 
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.745 0.158 55 / 55%);
+  --destructive: var(--pf-error-600);
 
-  --ember: oklch(0.745 0.158 55);
-  --rule: oklch(1 0 0 / 11%);
+  --border: var(--pf-line-warm);
+  --input: var(--pf-line-warm);
+  --ring: color-mix(in oklab, var(--pf-orange-600) 55%, transparent);
 
-  --chart-1: oklch(0.745 0.158 55);
-  --chart-2: oklch(0.70 0.10 70);
-  --chart-3: oklch(0.62 0.06 80);
-  --chart-4: oklch(0.50 0.03 80);
-  --chart-5: oklch(0.38 0.02 80);
+  --ember: var(--pf-orange-600);
+  /* AA-safe accent for small text on paper (orange-600 text fails 4.5:1 at
+     small sizes — see DESIGN.md). Same hue family, not a second accent. */
+  --ember-strong: var(--pf-orange-700);
+  --rule: var(--pf-line-warm);
+  --rule-structural: var(--pf-line-cool);
+  --code-ink: var(--pf-code-ink-900);
 
-  --radius: 0.5rem;
+  --chart-1: var(--pf-orange-600);
+  --chart-2: var(--pf-steel-500);
+  --chart-3: var(--pf-steel-300);
+  --chart-4: var(--pf-steel-700);
+  --chart-5: var(--pf-line-cool);
 
-  --sidebar: oklch(0.198 0.006 67);
-  --sidebar-foreground: oklch(0.955 0.004 80);
-  --sidebar-primary: oklch(0.745 0.158 55);
-  --sidebar-primary-foreground: oklch(0.185 0.02 60);
-  --sidebar-accent: oklch(0.265 0.007 67);
-  --sidebar-accent-foreground: oklch(0.955 0.004 80);
-  --sidebar-border: oklch(1 0 0 / 9%);
-  --sidebar-ring: oklch(0.745 0.158 55 / 55%);
-}
+  /* Radius scale, 9px signature. */
+  --radius-micro: 4px;
+  --radius-standard: 6px;
+  --radius-forge: 9px;
+  --radius-panel: 12px;
+  --radius-shell: 14px;
+  --radius: var(--radius-forge);
 
-/* Mirror so .dark consumers resolve the same instrument values. */
-.dark {
-  --background: oklch(0.165 0.006 67);
-  --foreground: oklch(0.955 0.004 80);
-  --card: oklch(0.198 0.006 67);
-  --card-foreground: oklch(0.955 0.004 80);
-  --popover: oklch(0.208 0.007 67);
-  --popover-foreground: oklch(0.955 0.004 80);
-  --primary: oklch(0.745 0.158 55);
-  --primary-foreground: oklch(0.185 0.02 60);
-  --secondary: oklch(0.265 0.007 67);
-  --secondary-foreground: oklch(0.955 0.004 80);
-  --muted: oklch(0.255 0.006 67);
-  --muted-foreground: oklch(0.715 0.012 70);
-  --accent: oklch(0.275 0.02 60);
-  --accent-foreground: oklch(0.955 0.004 80);
-  --destructive: oklch(0.62 0.21 27);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.745 0.158 55 / 55%);
-  --ember: oklch(0.745 0.158 55);
-  --rule: oklch(1 0 0 / 11%);
-  --chart-1: oklch(0.745 0.158 55);
-  --chart-2: oklch(0.70 0.10 70);
-  --chart-3: oklch(0.62 0.06 80);
-  --chart-4: oklch(0.50 0.03 80);
-  --chart-5: oklch(0.38 0.02 80);
-  --sidebar: oklch(0.198 0.006 67);
-  --sidebar-foreground: oklch(0.955 0.004 80);
-  --sidebar-primary: oklch(0.745 0.158 55);
-  --sidebar-primary-foreground: oklch(0.185 0.02 60);
-  --sidebar-accent: oklch(0.265 0.007 67);
-  --sidebar-accent-foreground: oklch(0.955 0.004 80);
-  --sidebar-border: oklch(1 0 0 / 9%);
-  --sidebar-ring: oklch(0.745 0.158 55 / 55%);
+  --sidebar: var(--pf-paper-100);
+  --sidebar-foreground: var(--pf-steel-900);
+  --sidebar-primary: var(--pf-orange-600);
+  --sidebar-primary-foreground: var(--pf-paper-0);
+  --sidebar-accent: var(--pf-paper-0);
+  --sidebar-accent-foreground: var(--pf-steel-900);
+  --sidebar-border: var(--pf-line-warm);
+  --sidebar-ring: color-mix(in oklab, var(--pf-orange-600) 55%, transparent);
+
+  /* Elevation: two shadows only, plus the one static ember glow. */
+  --shadow-resting: 0 1px 2px rgba(27, 28, 25, 0.04);
+  --shadow-active: 0 2px 4px rgba(27, 28, 25, 0.06);
+  --glow-ember: 0 0 12px rgba(230, 74, 25, 0.4);
 }
 
 @layer base {
@@ -165,13 +156,6 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
-    /* Drafting-grid surface: precise dots, not a blurred glow. */
-    background-image: radial-gradient(
-      var(--rule) 1px,
-      transparent 1px
-    );
-    background-size: 22px 22px;
-    background-position: -1px -1px;
   }
   html {
     @apply font-sans;
@@ -179,15 +163,15 @@
 }
 
 @layer components {
-  /* Engineering-drawing kicker label. */
+  /* Eyebrow / micro label — the only place uppercase is allowed. */
   .pf-kicker {
-    @apply font-mono text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground;
+    @apply font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground;
   }
 
-  /* Hairline-framed instrument panel with corner ticks. */
+  /* Hairline-framed panel with corner ticks, paper surface. */
   .pf-frame {
-    @apply relative rounded-lg bg-card;
-    box-shadow: inset 0 0 0 1px var(--rule);
+    @apply relative rounded-xl bg-card;
+    box-shadow: inset 0 0 0 1px var(--rule), var(--shadow-resting);
   }
   .pf-tick {
     @apply pointer-events-none absolute z-10 h-2.5 w-2.5 border-ember/45;

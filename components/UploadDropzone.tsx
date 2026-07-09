@@ -60,7 +60,7 @@ export function UploadDropzone({ source, onFileSelect, onLoadExample }: UploadDr
                 e.stopPropagation();
                 onLoadExample();
               }}
-              className="pf-kicker mt-2 text-ember underline-offset-2 hover:underline"
+              className="pf-kicker mt-2 text-ember-strong underline-offset-2 hover:underline"
             >
               Try with an example
             </button>

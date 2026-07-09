@@ -162,5 +162,5 @@ set with shared styling extracted across them.
   item 7 shipped. `RefinementBar.tsx` uses a plain styled `<input>` instead of
   reintroducing either primitive.
 - Replace `assets/screenshot.png` / `public/example.png` with a real product
-  screenshot when one is available (current one is a generic AI-generated
+  screenshot when one is available (current one is a generic auto-generated
   dashboard — fine as a placeholder).

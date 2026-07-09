@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { sampleSuggestions } from '@/lib/suggestions';
 import type { Status } from '@/lib/types';
 
 interface RefinementBarProps {
@@ -25,6 +26,7 @@ export function RefinementBar({
 }: RefinementBarProps) {
   const [value, setValue] = useState('');
   const [includeImage, setIncludeImage] = useState(true);
+  const [suggestions] = useState(sampleSuggestions);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const isForging = status === 'forging';
@@ -42,7 +44,7 @@ export function RefinementBar({
       <div className="flex items-center justify-between">
         <h3 className="pf-kicker">Refine</h3>
         {isForging && activeInstruction && (
-          <span className="truncate font-mono text-[0.7rem] text-ember">
+          <span className="truncate font-mono text-[0.7rem] text-ember-strong">
             Refining: &ldquo;{activeInstruction}&rdquo;
           </span>
         )}
@@ -71,6 +73,24 @@ export function RefinementBar({
           Refine
         </Button>
       </div>
+
+      {!disabled && !value && (
+        <div className="flex flex-wrap gap-1.5">
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => {
+                setValue(suggestion);
+                inputRef.current?.focus();
+              }}
+              className="rounded-full border border-rule px-2.5 py-1 font-mono text-[0.68rem] text-muted-foreground transition-colors hover:border-ember/50 hover:text-ember-strong"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
 
       {hasSourceImage && (
         <label className="flex items-center gap-1.5 text-[0.7rem] text-muted-foreground">

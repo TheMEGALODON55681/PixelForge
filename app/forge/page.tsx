@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { ClipboardPaste, Hammer, History, Keyboard, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
@@ -217,16 +218,16 @@ export default function Home() {
     <main className="relative flex min-h-screen flex-col">
       <Toaster position="top-right" />
 
-      {/* Instrument top bar */}
+      {/* Workspace top bar */}
       <header className="sticky top-0 z-20 border-b border-rule bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
-          <div className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
             <span className="flex size-7 items-center justify-center rounded-md bg-primary/12 text-ember ring-1 ring-ember/30">
               <Hammer className="size-4" aria-hidden />
             </span>
-            <span className="text-sm font-semibold tracking-tight">PixelForge</span>
+            <span className="font-heading text-sm font-extrabold tracking-tight">PixelForge</span>
             <span className="pf-kicker hidden sm:inline">· screenshot → code</span>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-3">
             <Button
@@ -249,7 +250,7 @@ export default function Home() {
         {/* Editorial intro — voiced, not a generic gradient hero. */}
         <div className="mb-8 max-w-2xl">
           <p className="pf-kicker mb-3">The forge</p>
-          <h1 className="text-balance text-3xl font-semibold leading-[1.1] tracking-tight sm:text-4xl">
+          <h1 className="text-balance font-heading text-3xl font-extrabold leading-[1.1] tracking-tight sm:text-4xl">
             Drop a screenshot.{' '}
             <span className="text-ember">Forge the markup.</span>
           </h1>

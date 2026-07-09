@@ -44,7 +44,7 @@ export function CodePanel({ code, framework, status, error, onRetry }: CodePanel
 
   if (status === 'error') {
     return (
-      <div className="flex h-full min-h-[20rem] flex-col items-center justify-center gap-3 rounded-md bg-[oklch(0.13_0.006_67)] px-6 text-center ring-1 ring-rule sm:min-h-[28rem]">
+      <div className="flex h-full min-h-[20rem] flex-col items-center justify-center gap-3 rounded-md bg-code-ink px-6 text-center ring-1 ring-rule-structural sm:min-h-[28rem]">
         <span className="flex size-9 items-center justify-center rounded-full bg-destructive/10 text-destructive ring-1 ring-destructive/20">
           <AlertTriangle className="size-4" aria-hidden />
         </span>
@@ -67,12 +67,12 @@ export function CodePanel({ code, framework, status, error, onRetry }: CodePanel
   }
 
   return (
-    <div className="h-full min-h-[20rem] overflow-auto rounded-md bg-[oklch(0.13_0.006_67)] ring-1 ring-rule sm:min-h-[28rem]">
+    <div className="h-full min-h-[20rem] overflow-auto rounded-md bg-code-ink ring-1 ring-rule-structural sm:min-h-[28rem]">
       {code ? (
         <div className="flex min-w-full font-mono text-xs leading-relaxed">
           <div
             aria-hidden
-            className="select-none border-r border-rule px-3 py-4 text-right text-muted-foreground/50"
+            className="select-none border-r border-white/10 px-3 py-4 text-right text-white/30"
           >
             {lines.map((_, i) => (
               <div key={i}>{i + 1}</div>
@@ -91,7 +91,7 @@ export function CodePanel({ code, framework, status, error, onRetry }: CodePanel
         </div>
       ) : (
         <div className="flex h-full items-center justify-center">
-          <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground/60">
+          <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-white/30">
             {'// markup will stream here'}
           </p>
         </div>

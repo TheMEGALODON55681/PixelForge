@@ -5,7 +5,7 @@
 <h1 align="center">PixelForge</h1>
 
 <p align="center">
-  An instrument for turning UI screenshots into clean, semantic HTML and Tailwind.<br/>
+  Turn a UI screenshot into clean, semantic HTML or JSX with Tailwind.<br/>
   Drop a screenshot. Forge the markup. Streamed live as the model writes it.
 </p>
 
@@ -28,48 +28,53 @@
 ## Overview
 
 <p align="center">
-  <img src="assets/hero.png" alt="PixelForge in action — a Wikipedia screenshot being converted to live HTML and Tailwind in real time" style="width: 95%; height: auto; border-radius: 8px;" />
+  <img src="assets/hero.png" alt="PixelForge in action, a Wikipedia screenshot being converted to live HTML and Tailwind in real time" style="width: 95%; height: auto; border-radius: 8px;" />
 </p>
 
-PixelForge is a screenshot-to-code tool with a deliberate point of view: it should feel less like a chat box and more like an engineering instrument. Drop a screenshot of any interface — a marketing hero, a dashboard, a Wikipedia article, a mobile app screen — and watch GPT-4o stream HTML and Tailwind back as the model writes it, with a live preview rendering the markup as each token arrives.
+PixelForge is a screenshot-to-code tool built to feel like an engineering instrument. Drop a screenshot of any interface, a marketing hero, a dashboard, a Wikipedia article, a mobile app screen, and watch GPT-4o stream HTML and Tailwind back as the model writes it, with a live preview rendering the markup as each token arrives.
+
+The product has three destinations: a marketing landing page at `/`, the forge workspace at `/forge`, and a getting-started guide at `/docs`.
 
 Built with Next.js 16, the Vercel AI SDK, and GPT-4o vision via GitHub Models.
 
 **Try it live:** [pixel-forge-three-nu.vercel.app](https://pixel-forge-three-nu.vercel.app/)
 
-<!-- BUCKET C — demo GIF (must be a real screen capture, cannot be AI-generated)
+<!-- BUCKET C, demo GIF (must be a real screen capture, not a placeholder)
      Record with ScreenToGif on Windows: capture the forge flow from upload → stream → live preview.
      Save as assets/demo.gif and remove this comment. -->
-<!-- <p align="center"><img src="assets/demo.gif" alt="PixelForge live demo — screenshot to streamed HTML" style="width: 95%; border-radius: 8px;" /></p> -->
+<!-- <p align="center"><img src="assets/demo.gif" alt="PixelForge live demo, screenshot to streamed HTML" style="width: 95%; border-radius: 8px;" /></p> -->
 
 ## What's new
 
-- **[2026/06]** Refinement loop — once a generation is Ready, describe a follow-up change ("make the header sticky") instead of starting over; the model streams back a full updated document, not a diff, and the previous version moves to history
-- **[2026/06]** Syntax-highlighted Code view via Shiki — themed to the panel, applied once a generation is Ready so streaming stays plain text and fast
-- **[2026/06]** History now persists across reloads — last 10 generations stored in localStorage with downscaled JPEG thumbnails that survive page refresh
-- **[2026/06]** Live deployment on Vercel — [pixel-forge-three-nu.vercel.app](https://pixel-forge-three-nu.vercel.app/)
-- **[2026/06]** Major UI overhaul: ember-on-graphite design language, hairline panels with corner registration ticks, live byte/line telemetry, real responsive layout
+- **[2026/07]** Forge and Steel redesign, three real routes (landing, forge, docs), a light paper-and-steel design system, and a scroll-reveal landing page
+- **[2026/07]** Server-side upload hardening, magic-byte signature checks, a decode/re-encode pass with a pixel-count ceiling, metadata stripped, a processing timeout, and a per-client rate limit on `/api/generate` (see `lib/upload-validation.ts` and `lib/rate-limit.ts`)
+- **[2026/07]** Content Security Policy added to the sandboxed preview document
+- **[2026/07]** Playwright test suite covering routing, the forge happy path, refinement, history, responsive layout, reduced motion, and the upload security boundary
+- **[2026/06]** Refinement loop, once a generation is Ready, describe a follow-up change ("make the header sticky") instead of starting over; the model streams back a full updated document, not a diff, and the previous version moves to history
+- **[2026/06]** Syntax-highlighted Code view via Shiki, themed to the panel, applied once a generation is Ready so streaming stays plain text and fast
+- **[2026/06]** History now persists across reloads, last 10 generations stored in localStorage with downscaled JPEG thumbnails that survive page refresh
+- **[2026/06]** Live deployment on Vercel, [pixel-forge-three-nu.vercel.app](https://pixel-forge-three-nu.vercel.app/)
 - **[2026/06]** Generation history (last 10 in session), framework toggle (HTML or JSX), one-click download, device-width preview (desktop / tablet / mobile), keyboard shortcuts (paste, forge, copy, download, history)
 - **[2026/06]** Paste-a-screenshot directly with ⌘V / Ctrl+V, real drag-and-drop, "Try with an example" for first-time visitors
-- **[2026/05]** Fidelity-tuned system prompt — inline SVG icons, gradient placeholders, full color reproduction (not grayscale)
-- **[2026/05]** Initial release: streaming generation, sandboxed live preview, dark UI
+- **[2026/05]** Fidelity-tuned system prompt, inline SVG icons, gradient placeholders, full color reproduction (not grayscale)
+- **[2026/05]** Initial release: streaming generation, sandboxed live preview
 
 ## Features
 
 The product does one thing.
 
-- **Live token streaming.** Code appears progressively, not after a 30-second wait. First token typically lands within ~2 seconds.
+- **Live token streaming.** Code streams in as the model writes it. First token typically lands within ~2 seconds.
 - **Live preview.** A sandboxed iframe with `srcDoc` renders the partial HTML using Tailwind's Play CDN. The preview updates as the model writes.
-- **Color and icon fidelity.** The system prompt explicitly demands real brand colors and inline SVG icons — not grayscale wireframes with icon names as text.
+- **Color and icon fidelity.** The system prompt demands real brand colors and inline SVG icons matched to the source screenshot.
 - **HTML or JSX output.** Toggle between raw HTML and React-ready JSX. The server-side prompt swaps in a JSX rider that handles `className`, self-closing void elements, and camelCased event handlers.
-- **Refinement loop.** Once a generation is Ready, describe a change — "make the header sticky" — instead of re-forging from scratch. The model reworks the current code in place, optionally re-sending the original screenshot for fidelity, and streams the full replacement document into the same Code and Preview surface.
+- **Refinement loop.** Once a generation is Ready, describe a change, "make the header sticky", instead of re-forging from scratch. The model reworks the current code in place, optionally re-sending the original screenshot for fidelity, and streams the full replacement document into the same Code and Preview surface.
 - **Syntax-highlighted code.** The Code view renders plain text while streaming and switches to full Shiki highlighting once a generation is Ready, themed to match the panel. Toggling HTML/JSX re-highlights with the correct grammar.
 - **Persistent history.** The last 10 generations survive page refresh, stored in localStorage with downscaled JPEG thumbnails. Restore any of them to keep iterating without losing earlier work.
 - **Device-width preview.** Constrain the preview iframe to 375px (mobile) or 768px (tablet) to verify that generated breakpoints actually reflow.
 - **Real input ergonomics.** Drag-and-drop, click-to-upload, and paste-a-screenshot with ⌘V/Ctrl+V. All three work because that's how people actually use screenshots.
 - **Keyboard-first controls.** ⌘Enter to forge, ⌘C to copy, ⌘S to download, ⌘/ for the shortcuts panel.
-- **Error recovery.** A failed generation surfaces a toast and an inline error block with a Retry button — it re-runs the last action, whether that was an initial forge or a refinement. A cancelled generation is never shown as an error.
-- **Sandboxed by design.** `sandbox="allow-scripts"` with no `allow-same-origin` — generated content cannot reach back into the host app.
+- **Error recovery.** A failed generation surfaces a toast and an inline error block with a Retry button, it re-runs the last action, whether that was an initial forge or a refinement. A cancelled generation is never shown as an error.
+- **Sandboxed by design.** `sandbox="allow-scripts"` with no `allow-same-origin`, generated content cannot reach back into the host app.
 
 <p align="center">
   <img src="assets/history.png" alt="The session history drawer, showing a previous generation with its source thumbnail, timestamp, byte count, and a Restore button" style="width: 95%; height: auto; border-radius: 8px;" />
@@ -77,50 +82,60 @@ The product does one thing.
 
 ## Architecture & Knowledge Graph
 
-This project includes a generated **knowledge graph** mapping all components, functions, utilities, and design decisions across the codebase.
+This project includes a generated **knowledge graph** mapping components, functions, utilities, and design decisions across the codebase, including the Forge and Steel redesign and the three-route architecture below.
 
 **Graph stats (as of last regeneration):**
-- **430 nodes** (components, functions, configs, concepts, design notes)
-- **575 edges** (dependencies, references, semantic relationships)
-- **30 communities** (natural clusters of related functionality)
-- **Core abstractions:** `PixelForge Application` (27 connections), `cn()` utility (23 connections), streaming pipeline, UI components
+- **519 nodes** (components, functions, configs, concepts, design notes)
+- **714 edges** (dependencies, references, semantic relationships)
+- **43 communities** (natural clusters of related functionality)
+- **Core abstractions:** `cn()` utility (23 connections), the project roadmap, `app/forge/page.tsx` (11 connections), the component and lib layers
 
 ### Project structure
 
-The codebase was refactored from a single `app/page.tsx` monolith into a layered architecture:
+The codebase is a layered architecture across three routes, one API route, and shared hooks/lib:
 
 ```
 app/
-  page.tsx                   — thin composition layer; orchestrates hooks + components
-  api/generate/route.ts      — AI streaming endpoint; initial and refinement modes
+  (marketing)/page.tsx      - landing page: hero, features, process, specimens
+  forge/page.tsx            - the forge workspace; thin composition layer over hooks + components
+  docs/page.tsx             - getting-started guide
+  api/generate/route.ts     - AI streaming endpoint; initial and refinement modes, upload hardening, rate limit
 hooks/
-  usePixelForge.ts           — generation state machine; forge/refine/retry, AbortController, object URL lifecycle
-  useHistory.ts              — localStorage persistence; SSR-safe, versioned key pixelforge:history:v1
-  useKeyboardShortcuts.ts    — global paste + keydown listeners; ref-pattern for stable registration
+  usePixelForge.ts          - generation state machine; forge/refine/retry, AbortController, object URL lifecycle
+  useHistory.ts             - localStorage persistence; SSR-safe, versioned key pixelforge:history:v1
+  useKeyboardShortcuts.ts   - global paste + keydown listeners; ref-pattern for stable registration
+  useReveal.ts              - IntersectionObserver scroll-reveal, reduced-motion aware
 components/
-  UploadDropzone.tsx         — drag-drop zone, file input, example loader
-  PreviewCanvas.tsx          — sandboxed iframe (sandbox="allow-scripts" only)
-  Toolbar.tsx                — output controls, framework toggle, device width, telemetry
-  CodePanel.tsx              — code view with line numbers, Shiki highlighting, error + retry state
-  RefinementBar.tsx          — follow-up instruction input that drives the refinement loop
-  HistoryDrawer.tsx          — history dialog with downscaled JPEG thumbnails
-  ShortcutsDialog.tsx        — keyboard shortcuts dialog
+  layout/Nav.tsx, Footer.tsx - shared chrome for landing and docs
+  landing/                  - Hero, Process, Features, Specimens, Reveal
+  UploadDropzone.tsx        - drag-drop zone, file input, example loader
+  PreviewCanvas.tsx         - sandboxed iframe (sandbox="allow-scripts" only)
+  Toolbar.tsx               - output controls, framework toggle, device width, telemetry
+  CodePanel.tsx             - code view with line numbers, Shiki highlighting, error + retry state
+  RefinementBar.tsx         - follow-up instruction input that drives the refinement loop, with suggestion chips
+  HistoryDrawer.tsx         - history dialog with downscaled JPEG thumbnails
+  ShortcutsDialog.tsx       - keyboard shortcuts dialog
 lib/
-  types.ts                   — shared type definitions (Status, Framework, HistoryEntry, etc.)
-  highlight.ts               — lazy-loaded Shiki singleton for the Code view
-  preview.ts                 — createPreviewDoc() for iframe srcDoc content
-  utils.ts                   — cn(), formatBytes(), createThumbnail()
+  types.ts                  - shared type definitions (Status, Framework, HistoryEntry, etc.)
+  highlight.ts              - lazy-loaded Shiki singleton for the Code view
+  preview.ts                - createPreviewDoc() for iframe srcDoc content, now with a CSP
+  upload-validation.ts      - server-side image validation, magic-byte check, decode/re-encode, dimension ceiling
+  rate-limit.ts             - in-memory fixed-window rate limit for /api/generate
+  suggestions.ts            - refinement suggestion pool, sampled without replacement
+  scroll.ts                 - header-offset-aware smooth scroll for in-page anchors
+  utils.ts                  - cn(), formatBytes(), createThumbnail()
+tests/                       - Playwright suite: routing, landing, forge, upload security, preview CSP, responsive
 ```
 
 ### Explore the graph
 
-- **Interactive 3D graph:** [`docs/architecture/graph.html`](docs/architecture/graph.html) — open locally to zoom, pan, and click nodes
-- **Full report:** [`docs/architecture/GRAPH_REPORT.md`](docs/architecture/GRAPH_REPORT.md) — communities, cohesion metrics, refactoring suggestions, isolated nodes
-- **Raw graph data:** [`docs/architecture/graph.json`](docs/architecture/graph.json) — structured data for programmatic use
+- **Interactive 3D graph:** [`docs/architecture/graph.html`](docs/architecture/graph.html), open locally to zoom, pan, and click nodes
+- **Full report:** [`docs/architecture/GRAPH_REPORT.md`](docs/architecture/GRAPH_REPORT.md), communities, cohesion metrics, refactoring suggestions, isolated nodes
+- **Raw graph data:** [`docs/architecture/graph.json`](docs/architecture/graph.json), structured data for programmatic use
 
 The graph makes it possible to understand the architecture without reading every file. It identifies isolated components, weak cohesion areas, missing edges, and which nodes bridge communities, the ones that cost the most when changed.
 
-<!-- BUCKET B — architecture diagram (generated from code, not product UI) -->
+<!-- BUCKET B, architecture diagram (generated from code, not product UI) -->
 <p align="center">
   <img src="assets/architecture.svg" alt="PixelForge architecture: page.tsx → hooks → components → lib, with /api/generate and sandboxed iframe boundaries" style="width: 95%; height: auto;" />
 </p>
@@ -135,11 +150,33 @@ PixelForge breaks down screenshot-to-code into a streaming pipeline:
 
 1. **Upload stage.** The image is validated client-side (type, size up to 10MB), then sent as multipart form data to the `/api/generate` route handler.
 
-2. **Inference stage.** The route handler base64-encodes the image and constructs a multimodal chat completion request to GPT-4o via GitHub Models. A fidelity-tuned system prompt demands semantic HTML with Tailwind utility classes, inline SVG icons, real brand colors, and gradient placeholders for images — no markdown fences, no preamble. A refinement request swaps in the existing code and a natural-language instruction in place of a fresh screenshot. A rider in the system prompt requires the model to return the full updated document, never a diff.
+2. **Inference stage.** The route handler base64-encodes the image and constructs a multimodal chat completion request to GPT-4o via GitHub Models. A fidelity-tuned system prompt demands semantic HTML with Tailwind utility classes, inline SVG icons, real brand colors, and gradient placeholders for images, no markdown fences, no preamble. A refinement request swaps in the existing code and a natural-language instruction in place of a fresh screenshot. A rider in the system prompt requires the model to return the full updated document, never a diff.
 
 3. **Streaming stage.** The model's response is returned as a text stream using the Vercel AI SDK's `streamText` → `toTextStreamResponse()`. The client reads the `ReadableStream` chunk-by-chunk and updates state on every token. An `AbortController` cancels in-flight work if the user re-submits or navigates away.
 
 4. **Render stage.** As code streams in, a sandboxed iframe with `srcDoc` re-renders the partial HTML using Tailwind's Play CDN. The user sees code and preview evolving live, with an Idle → Forging → Ready status indicator and live byte/line telemetry.
+
+## Security
+
+The upload is never written to disk and never served back to a browser, it is validated, decoded, re-encoded, base64-encoded, and sent to the model. `/api/generate` enforces, server-side, regardless of what the client already checked:
+
+- A size ceiling (10MB) and empty-file rejection.
+- A declared-type allowlist (PNG, JPEG, WEBP only).
+- A magic-byte signature check, cross-referenced against the declared type, a renamed PDF, an SVG, or a mismatched extension is rejected before any decode.
+- A decode pass with a pixel-count ceiling, guarding against decompression-bomb-style inputs.
+- A re-encode through a bounded decoder that strips EXIF and other metadata and neutralizes any trailing polyglot bytes, with a processing timeout.
+- A per-client, fixed-window rate limit on the endpoint.
+
+Rejections return a short, non-leaky message; the server logs a reason code, not raw image bytes. The sandboxed preview iframe (`sandbox="allow-scripts"`, no `allow-same-origin`) also carries a Content Security Policy scoped to what the Tailwind CDN preview needs. See `lib/upload-validation.ts`, `lib/rate-limit.ts`, and `lib/preview.ts`.
+
+## Testing
+
+```bash
+npx playwright install chromium   # first run only
+npm test
+```
+
+The suite (`tests/`) builds and starts a production server, then covers routing across all three destinations, the forge happy path and refinement loop, history persistence, responsive layout at 375/768/1280px, reduced motion, the preview CSP, and the upload security boundary (oversized, empty, mismatched-signature, PDF-as-PNG, dimension-bomb, malformed, and rate-limited requests). Tests run serially, the in-memory rate limiter and the live GPT-4o calls are shared server-side state.
 
 ## Tech stack
 
@@ -158,7 +195,7 @@ PixelForge breaks down screenshot-to-code into a streaming pipeline:
 
 ## Getting started
 
-> Just want to try it? Open the **[live demo](https://pixel-forge-three-nu.vercel.app/)** — no setup required.
+> Just want to try it? Open the **[live demo](https://pixel-forge-three-nu.vercel.app/)**, no setup required.
 >
 > To run it yourself or contribute, follow the steps below.
 
@@ -213,30 +250,33 @@ A few choices worth flagging:
 GitHub Models is a free, OpenAI-compatible inference endpoint that gives access to GPT-4o-tier models without billing setup. The Vercel AI SDK works with it via `createOpenAI({ baseURL })`. GitHub Models supports the Chat Completions API but not the newer Responses API, so the provider is called via `.chat()` explicitly.
 
 **Why streaming?**
-Vision generation takes 20–30 seconds. Without streaming, the UI freezes and feels broken. With streaming, the first token arrives within ~2 seconds and the user can read the markup as it forms — perceived latency drops by an order of magnitude.
+Vision generation takes 20–30 seconds. Without streaming, the UI freezes and feels broken. With streaming, the first token arrives within ~2 seconds and the user can read the markup as it forms, perceived latency drops by an order of magnitude.
 
 **Why an iframe with Tailwind Play CDN for preview?**
 Generated HTML uses arbitrary Tailwind classes that can't be known at build time. Rendering inline would require runtime JIT in the parent app and risks style leakage. A sandboxed iframe with `srcDoc` solves both: it loads Tailwind via CDN for runtime compilation, and `sandbox="allow-scripts"` (without `allow-same-origin`) isolates generated content from the host app.
 
 **Why force the model to skip markdown code fences (and clean them anyway)?**
-GPT-4o ignores explicit "no code fences" instructions a meaningful fraction of the time. The system prompt asks; a `stripCodeFences` regex cleans up when the model doesn't listen. Defense in depth — the same principle as validating input on both client and server.
+GPT-4o ignores explicit "no code fences" instructions a meaningful fraction of the time. The system prompt asks; a `stripCodeFences` regex cleans up when the model doesn't listen. Defense in depth, the same principle as validating input on both client and server.
 
-**Why a single dark theme?**
-The preview must render on white. Dark chrome around a white artboard reads like an instrument — drafting table, workbench, forge. A light theme would put the preview on the same brightness as the surrounding UI and dissolve the visual hierarchy. The trade-off is honest: this is a tool that does one job; a second theme would be decoration, not function.
+**Why one light theme, and a dark code panel inside it?**
+The rest of the app is paper and steel, see [DESIGN.md](DESIGN.md) for the full token system. The one deliberately dark surface is the code output panel, styled to look like a real editor rather than the page around it. That contrast carries the "instrument" feel now.
 
 **Why localStorage for history instead of a database?**
-History is a local aid to iteration, not a shareable artifact. localStorage keeps it fast, private, and zero-infrastructure. Thumbnails are downscaled to a max of 200px on the long edge and stored as JPEG data URLs so they survive serialization across reloads — object URLs, which die with the page, are not used.
+History is a local aid to iteration. localStorage keeps it fast, private, and zero-infrastructure. Thumbnails are downscaled to a max of 200px on the long edge and stored as JPEG data URLs so they survive serialization across reloads, object URLs, which die with the page, are not used.
 
 ## Roadmap
 
 Near term:
-- [x] Production deployment on Vercel — [live](https://pixel-forge-three-nu.vercel.app/)
+- [x] Production deployment on Vercel, [live](https://pixel-forge-three-nu.vercel.app/)
 - [x] Persist session history across reloads
 - [ ] Persist framework/device-width preferences across reloads
 - [x] Syntax highlighting in the Code view (Shiki)
+- [x] Forge and Steel redesign, landing, forge, and docs routes on the new design system
+- [x] Server-side upload hardening and preview CSP
+- [x] Playwright test suite
 
 Mid term:
-- [x] **Refinement loop** — "make the header sticky," "use a 3-column grid" — re-runs the model with the previous code + a natural-language instruction
+- [x] **Refinement loop**, "make the header sticky," "use a 3-column grid", re-runs the model with the previous code + a natural-language instruction
 - [ ] Multi-framework output: HTML, React (JSX/TSX), Vue SFC
 - [ ] Element-level inspection: redraw a region of the screenshot and regenerate just that fragment
 - [ ] Automated accessibility audit of generated output
@@ -248,7 +288,7 @@ Long term:
 
 ## Acknowledgments
 
-- Inspired by [`screenshot-to-code`](https://github.com/abi/screenshot-to-code) by Abi Raja — the project that established this category. PixelForge is a from-scratch reimplementation built to explore the architecture firsthand using a different stack (Next.js + Vercel AI SDK vs. FastAPI + WebSockets).
+- Inspired by [`screenshot-to-code`](https://github.com/abi/screenshot-to-code) by Abi Raja, the project that established this category. PixelForge is a from-scratch reimplementation built to explore the architecture firsthand using a different stack (Next.js + Vercel AI SDK vs. FastAPI + WebSockets).
 - UI primitives from [shadcn/ui](https://ui.shadcn.com) (radix-nova preset)
 - Icons from [Lucide](https://lucide.dev)
 - Streaming via [Vercel AI SDK](https://sdk.vercel.ai)
@@ -256,7 +296,7 @@ Long term:
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT, see [LICENSE](LICENSE) for details.
 
 ---
 

@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText } from "ai";
+import { validateAndReencodeImage } from "@/lib/upload-validation";
+import { checkRateLimit, clientKeyFromHeaders } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-const MAX_BYTES = 10 * 1024 * 1024;
 
 /*
   Prompt v2 — fidelity-first.
@@ -119,6 +119,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // SEC-11: fixed-window rate limit, blunting automated abuse of this
+  // unauthenticated, model-backed endpoint.
+  const clientKey = clientKeyFromHeaders(req.headers);
+  const rateLimit = checkRateLimit(clientKey);
+  if (!rateLimit.allowed) {
+    return new Response("Too many requests. Try again shortly.", {
+      status: 429,
+      headers: { "Retry-After": Math.ceil(rateLimit.retryAfterMs / 1000).toString() },
+    });
+  }
+
   let mode = "initial";
   let image: File | null = null;
   let framework = "html";
@@ -165,13 +176,21 @@ export async function POST(req: NextRequest) {
   }
 
   // The image is required for "initial", optional (visual context) for "refine".
+  // Validated and re-encoded here, at the trusted server boundary, before any
+  // decision is made using its declared type or size (Section 12).
+  let validatedImage: { buffer: Buffer; mimeType: string } | null = null;
   if (image) {
-    if (!image.type.startsWith("image/"))
-      return new Response("File must be an image", { status: 400 });
-    if (image.size > MAX_BYTES)
-      return new Response("Image must be smaller than 10MB", { status: 400 });
-    if (image.size === 0)
-      return new Response("Image file is empty", { status: 400 });
+    const result = await validateAndReencodeImage(image);
+    if (!result.ok) {
+      // SEC-13: log enough to debug, never the raw bytes.
+      console.warn("Image rejected:", {
+        reason: result.reason,
+        declaredType: image.type,
+        size: image.size,
+      });
+      return new Response(result.message, { status: 400 });
+    }
+    validatedImage = { buffer: result.buffer, mimeType: result.mimeType };
   }
 
   try {
@@ -196,10 +215,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (image) {
-      const bytes = await image.arrayBuffer();
-      const base64 = Buffer.from(bytes).toString("base64");
-      const dataUrl = `data:${image.type};base64,${base64}`;
+    if (validatedImage) {
+      const base64 = validatedImage.buffer.toString("base64");
+      const dataUrl = `data:${validatedImage.mimeType};base64,${base64}`;
       if (mode === "refine") {
         content.push({ type: "text", text: "Reference screenshot for visual fidelity:" });
       }
