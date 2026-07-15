@@ -39,6 +39,10 @@ Built with Next.js 16, the Vercel AI SDK, and GPT-4o vision via GitHub Models.
 
 **Try it live:** [pixel-forge-three-nu.vercel.app](https://pixel-forge-three-nu.vercel.app/)
 
+<p align="center">
+  <img src="assets/specimens.png" alt="Forged specimens on the landing page, a JSX PricingCard and an HTML DashboardStats block generated from screenshots" style="width: 95%; height: auto; border-radius: 8px;" />
+</p>
+
 <!-- BUCKET C, demo GIF (must be a real screen capture, not a placeholder)
      Record with ScreenToGif on Windows: capture the forge flow from upload → stream → live preview.
      Save as assets/demo.gif and remove this comment. -->
@@ -60,6 +64,10 @@ Built with Next.js 16, the Vercel AI SDK, and GPT-4o vision via GitHub Models.
 - **[2026/05]** Initial release: streaming generation, sandboxed live preview
 
 ## Features
+
+<p align="center">
+  <img src="assets/features.png" alt="The landing page features grid: two output targets, live sandboxed preview, refinement loop, Tailwind by default, persistent history, and copy-clean output" style="width: 95%; height: auto; border-radius: 8px;" />
+</p>
 
 The product does one thing.
 
@@ -145,6 +153,10 @@ The graph makes it possible to understand the architecture without reading every
 ---
 
 ## How it works
+
+<p align="center">
+  <img src="assets/forge.png" alt="The forge workspace at /forge, with the upload dropzone on the left and a live output canvas on the right, plus Preview/Code, HTML/JSX, and device-width controls" style="width: 95%; height: auto; border-radius: 8px;" />
+</p>
 
 PixelForge breaks down screenshot-to-code into a streaming pipeline:
 
