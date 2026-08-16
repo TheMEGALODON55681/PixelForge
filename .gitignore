@@ -37,6 +37,15 @@ yarn-error.log*
 .env
 !.env.example
 
+# internal working docs
+AGENTS.md
+CHANGES.md
+CLAUDE.md
+DESIGN.md
+FOLLOWUPS.md
+INTEGRATION_REVIEW.md
+ROADMAP.md
+
 # vercel
 .vercel
 
