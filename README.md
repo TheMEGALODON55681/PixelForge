@@ -31,11 +31,11 @@
   <img src="assets/hero.png" alt="PixelForge in action, a Wikipedia screenshot being converted to live HTML and Tailwind in real time" style="width: 95%; height: auto; border-radius: 8px;" />
 </p>
 
-PixelForge is a screenshot-to-code tool built to feel like an engineering instrument. Drop a screenshot of any interface, a marketing hero, a dashboard, a Wikipedia article, a mobile app screen, and watch GPT-4o stream HTML and Tailwind back as the model writes it, with a live preview rendering the markup as each token arrives.
+PixelForge is a screenshot-to-code tool built to feel like an engineering instrument. Drop a screenshot of any interface, a marketing hero, a dashboard, a Wikipedia article, a mobile app screen, and watch Gemini stream HTML and Tailwind back as the model writes it, with a live preview rendering the markup as each token arrives.
 
 The product has three destinations: a marketing landing page at `/`, the forge workspace at `/forge`, and a getting-started guide at `/docs`.
 
-Built with Next.js 16, the Vercel AI SDK, and GPT-4o vision via GitHub Models.
+Built with Next.js 16, the Vercel AI SDK, and Gemini vision.
 
 **Try it live:** [pixel-forge-three-nu.vercel.app](https://pixel-forge-three-nu.vercel.app/)
 
@@ -162,7 +162,7 @@ PixelForge breaks down screenshot-to-code into a streaming pipeline:
 
 1. **Upload stage.** The image is validated client-side (type, size up to 10MB), then sent as multipart form data to the `/api/generate` route handler.
 
-2. **Inference stage.** The route handler base64-encodes the image and constructs a multimodal chat completion request to GPT-4o via GitHub Models. A fidelity-tuned system prompt demands semantic HTML with Tailwind utility classes, inline SVG icons, real brand colors, and gradient placeholders for images, no markdown fences, no preamble. A refinement request swaps in the existing code and a natural-language instruction in place of a fresh screenshot. A rider in the system prompt requires the model to return the full updated document, never a diff.
+2. **Inference stage.** The route handler base64-encodes the image and constructs a multimodal generation request to Gemini. A fidelity-tuned system prompt demands semantic HTML with Tailwind utility classes, inline SVG icons, real brand colors, and gradient placeholders for images, no markdown fences, no preamble. A refinement request swaps in the existing code and a natural-language instruction in place of a fresh screenshot. A rider in the system prompt requires the model to return the full updated document, never a diff.
 
 3. **Streaming stage.** The model's response is returned as a text stream using the Vercel AI SDK's `streamText` → `toTextStreamResponse()`. The client reads the `ReadableStream` chunk-by-chunk and updates state on every token. An `AbortController` cancels in-flight work if the user re-submits or navigates away.
 
@@ -188,7 +188,7 @@ npx playwright install chromium   # first run only
 npm test
 ```
 
-The suite (`tests/`) builds and starts a production server, then covers routing across all three destinations, the forge happy path and refinement loop, history persistence, responsive layout at 375/768/1280px, reduced motion, the preview CSP, and the upload security boundary (oversized, empty, mismatched-signature, PDF-as-PNG, dimension-bomb, malformed, and rate-limited requests). Tests run serially, the in-memory rate limiter and the live GPT-4o calls are shared server-side state.
+The suite (`tests/`) builds and starts a production server, then covers routing across all three destinations, the forge happy path and refinement loop, history persistence, responsive layout at 375/768/1280px, reduced motion, the preview CSP, and the upload security boundary (oversized, empty, mismatched-signature, PDF-as-PNG, dimension-bomb, malformed, and rate-limited requests). Tests run serially, the in-memory rate limiter and the live Gemini calls are shared server-side state.
 
 ## Tech stack
 
@@ -199,7 +199,7 @@ The suite (`tests/`) builds and starts a production server, then covers routing 
 | Styling | Tailwind CSS v4 (CSS-first config) |
 | UI primitives | shadcn/ui (radix-nova preset) |
 | AI integration | Vercel AI SDK |
-| Model | GPT-4o via GitHub Models |
+| Model | Gemini (gemini-3.6-flash) |
 | Icons | Lucide React |
 | Syntax highlighting | Shiki |
 | Notifications | Sonner |
@@ -214,8 +214,7 @@ The suite (`tests/`) builds and starts a production server, then covers routing 
 ### Prerequisites
 
 - Node.js 20 or higher
-- A GitHub account with access to [GitHub Models](https://github.com/marketplace/models)
-- A GitHub Personal Access Token with `Models: Read-only` permission
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
 
 ### Installation
 
@@ -230,7 +229,7 @@ npm install
 Create a `.env.local` file in the project root:
 
 ```
-GITHUB_MODELS_TOKEN=your_github_pat_here
+GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key_here
 ```
 
 ### Run locally
@@ -258,8 +257,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 A few choices worth flagging:
 
-**Why GitHub Models instead of OpenAI directly?**
-GitHub Models is a free, OpenAI-compatible inference endpoint that gives access to GPT-4o-tier models without billing setup. The Vercel AI SDK works with it via `createOpenAI({ baseURL })`. GitHub Models supports the Chat Completions API but not the newer Responses API, so the provider is called via `.chat()` explicitly.
+**Why Gemini?**
+GitHub Models, the free-tier provider PixelForge originally shipped on, shut down its API. Gemini 3.6 Flash is called directly through `@ai-sdk/google`, Google's own multimodal SDK, no OpenAI-compatibility shim required.
 
 **Why streaming?**
 Vision generation takes 20–30 seconds. Without streaming, the UI freezes and feels broken. With streaming, the first token arrives within ~2 seconds and the user can read the markup as it forms, perceived latency drops by an order of magnitude.
@@ -268,7 +267,7 @@ Vision generation takes 20–30 seconds. Without streaming, the UI freezes and f
 Generated HTML uses arbitrary Tailwind classes that can't be known at build time. Rendering inline would require runtime JIT in the parent app and risks style leakage. A sandboxed iframe with `srcDoc` solves both: it loads Tailwind via CDN for runtime compilation, and `sandbox="allow-scripts"` (without `allow-same-origin`) isolates generated content from the host app.
 
 **Why force the model to skip markdown code fences (and clean them anyway)?**
-GPT-4o ignores explicit "no code fences" instructions a meaningful fraction of the time. The system prompt asks; a `stripCodeFences` regex cleans up when the model doesn't listen. Defense in depth, the same principle as validating input on both client and server.
+Gemini ignores explicit "no code fences" instructions a meaningful fraction of the time. The system prompt asks; a `stripCodeFences` regex cleans up when the model doesn't listen. Defense in depth, the same principle as validating input on both client and server.
 
 **Why one light theme, and a dark code panel inside it?**
 The rest of the app is paper and steel, see [DESIGN.md](DESIGN.md) for the full token system. The one deliberately dark surface is the code output panel, styled to look like a real editor rather than the page around it. That contrast carries the "instrument" feel now.
@@ -304,7 +303,7 @@ Long term:
 - UI primitives from [shadcn/ui](https://ui.shadcn.com) (radix-nova preset)
 - Icons from [Lucide](https://lucide.dev)
 - Streaming via [Vercel AI SDK](https://sdk.vercel.ai)
-- Inference via [GitHub Models](https://github.com/marketplace/models)
+- Inference via [Gemini](https://ai.google.dev/)
 
 ## License
 

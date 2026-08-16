@@ -61,7 +61,7 @@
 10. `Output Panel (Right): Generated Code/HTML Preview` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Screenshot-to-Code Streaming Pipeline (upload→base64→GPT-4o→stream→preview)` --semantically_similar_to--> `Pipeline: Upload Stage`  [INFERRED] [semantically similar]
+- `Screenshot-to-Code Streaming Pipeline (upload→base64→Gemini→stream→preview)` --semantically_similar_to--> `Pipeline: Upload Stage`  [INFERRED] [semantically similar]
   CHANGES.md → README.md
 - `Precision Instrument / Forge Design Thesis` --semantically_similar_to--> `Quality Bar (applies to every roadmap item)`  [INFERRED] [semantically similar]
   CHANGES.md → ROADMAP.md

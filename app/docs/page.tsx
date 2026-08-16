@@ -18,7 +18,7 @@ const SECTIONS = [
   {
     num: '02',
     title: 'Forge and watch it stream',
-    body: `Press Forge. The output panel streams the generated markup line by line as GPT-4o reads the screenshot, and the Preview tab renders the result live in a sandboxed frame the moment there is enough markup to show. Switch to the Code tab any time to read the raw, syntax-highlighted output.\n\nUse the device-width buttons to check the layout at desktop, tablet (768px), and mobile (375px) without leaving the page.`,
+    body: `Press Forge. The output panel streams the generated markup line by line as Gemini reads the screenshot, and the Preview tab renders the result live in a sandboxed frame the moment there is enough markup to show. Switch to the Code tab any time to read the raw, syntax-highlighted output.\n\nUse the device-width buttons to check the layout at desktop, tablet (768px), and mobile (375px) without leaving the page.`,
   },
   {
     num: '03',

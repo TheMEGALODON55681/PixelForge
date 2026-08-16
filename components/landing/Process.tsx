@@ -11,7 +11,7 @@ const STEPS = [
     num: '02',
     phase: 'Heat',
     title: 'The forge streams the markup',
-    body: 'GPT-4o hammers the screenshot into semantic HTML or JSX with Tailwind, streamed line by line into a live sandboxed preview.',
+    body: 'Gemini hammers the screenshot into semantic HTML or JSX with Tailwind, streamed line by line into a live sandboxed preview.',
   },
   {
     num: '03',

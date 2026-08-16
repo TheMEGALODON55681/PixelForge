@@ -241,7 +241,7 @@ export default function Home() {
               History ({historyEntries.length})
             </Button>
             <StatusChip status={status} />
-            <span className="pf-kicker hidden md:inline">gpt-4o · github models</span>
+            <span className="pf-kicker hidden md:inline">gemini 3.6 flash</span>
           </div>
         </div>
       </header>
@@ -370,7 +370,7 @@ export default function Home() {
       <footer className="border-t border-rule">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
           <p className="pf-kicker">
-            Next.js · Tailwind · Vercel AI SDK · GitHub Models
+            Next.js · Tailwind · Vercel AI SDK · Gemini
           </p>
           <Button
             variant="ghost"

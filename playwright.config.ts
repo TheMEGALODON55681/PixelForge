@@ -3,8 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   // Serialized: tests share live server-side state (the in-memory rate
-  // limiter in lib/rate-limit.ts, and real GPT-4o calls through one
-  // GITHUB_MODELS_TOKEN) that isn't safe under parallel workers.
+  // limiter in lib/rate-limit.ts, and real Gemini calls through one
+  // GOOGLE_GENERATIVE_AI_API_KEY) that isn't safe under parallel workers.
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,

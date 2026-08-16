@@ -87,11 +87,11 @@ region) and regenerate just that fragment. Hard but distinctive.
 well; defer until 6 and 7 are solid.
 
 ### 9. Model choice + quality/speed toggle
-**Why.** GitHub Models offers more than GPT-4o. Users may want a faster cheaper
+**Why.** Gemini offers more than gemini-3.6-flash. Users may want a faster cheaper
 pass or a higher-fidelity slower one.
-**What.** A small model selector (e.g. GPT-4o vs a stronger vision model as they
-become available on the provider). Surface a "draft / refined" toggle that maps
-to temperature + model. Keep GPT-4o the default.
+**What.** A small model selector (e.g. gemini-3.6-flash vs a stronger vision model as
+they become available on the provider). Surface a "draft / refined" toggle that maps
+to temperature + model. Keep gemini-3.6-flash the default.
 **Effort.** S–M. **Risk.** Low–Medium (validate each model's prompt adherence).
 
 ### 10. Accessibility + responsiveness audit of *generated* output

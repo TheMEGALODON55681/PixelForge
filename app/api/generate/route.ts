@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { streamText } from "ai";
 import { validateAndReencodeImage } from "@/lib/upload-validation";
 import { checkRateLimit, clientKeyFromHeaders } from "@/lib/rate-limit";
@@ -106,15 +106,14 @@ Apply ALL of the following transformations:
 - Do NOT emit <html>, <head>, or <body> tags. Output ONLY the component markup.
 - Keep all other rules intact: inline SVG icons, gradient placeholders, color fidelity, semantic HTML.`;
 
-const github = createOpenAI({
-  baseURL: "https://models.github.ai/inference",
-  apiKey: process.env.GITHUB_MODELS_TOKEN,
+const google = createGoogleGenerativeAI({
+  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 });
 
 export async function POST(req: NextRequest) {
-  if (!process.env.GITHUB_MODELS_TOKEN) {
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     return new Response(
-      "Server is not configured: GITHUB_MODELS_TOKEN is missing.",
+      "Server is not configured: GOOGLE_GENERATIVE_AI_API_KEY is missing.",
       { status: 500 },
     );
   }
@@ -225,7 +224,7 @@ export async function POST(req: NextRequest) {
     }
 
     const result = streamText({
-      model: github.chat("openai/gpt-4o"),
+      model: google("gemini-3.6-flash"),
       system: systemPrompt,
       messages: [{ role: "user", content }],
       // Slightly higher than v1's 0.2 — enough latitude for color/gradient
